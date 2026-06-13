@@ -3,9 +3,10 @@
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import type { Photo } from "@/lib/types";
-import { FilterBar, type TagFilter } from "@/components/filter-bar";
+import { FilterBar } from "@/components/filter-bar";
 import { PhotoTile } from "@/components/photo-tile";
 import { useSync } from "@/lib/hooks/use-sync";
+import { labelFor, type CategoryKey } from "@/lib/categories";
 
 const PAGE_SIZE = 50;
 
@@ -18,23 +19,16 @@ export function BoardClient({
 }) {
   const router = useRouter();
   const [photos, setPhotos] = useState(initialPhotos);
-  const [filter, setFilter] = useState<TagFilter>("all");
-  const [pickedOnly, setPickedOnly] = useState(false);
+  const [filter, setFilter] = useState<string>("all");
   const [visible, setVisible] = useState(PAGE_SIZE);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
-  // Refresh server data when a sync finishes; keep local state in step with it.
   const { progress, runSync } = useSync(useCallback(() => router.refresh(), [router]));
   useEffect(() => setPhotos(initialPhotos), [initialPhotos]);
 
   const filtered = useMemo(
-    () =>
-      photos.filter((p) => {
-        if (pickedOnly && !p.picked) return false;
-        if (filter !== "all" && !(p.tags ?? []).includes(filter)) return false;
-        return true;
-      }),
-    [photos, filter, pickedOnly]
+    () => photos.filter((p) => filter === "all" || p.category === filter),
+    [photos, filter]
   );
 
   // Collapse near-duplicates: one representative per duplicate group.
@@ -47,31 +41,37 @@ export function BoardClient({
     return Array.from(map.values());
   }, [filtered]);
 
-  const togglePick = useCallback(async (photo: Photo) => {
-    const picked = !photo.picked;
-    setPhotos((prev) =>
-      prev.map((p) => (p.id === photo.id ? { ...p, picked } : p))
-    );
-    await fetch("/api/photos/pick", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: photo.id, picked }),
-    }).catch(() => {});
-  }, []);
+  // Her correction: optimistically update, call the move endpoint, revert on failure.
+  const reclassify = useCallback(
+    async (photo: Photo, category: string) => {
+      if (category === photo.category) return;
+      setPhotos((prev) =>
+        prev.map((p) => (p.id === photo.id ? { ...p, category: category as CategoryKey } : p))
+      );
+      const res = await fetch("/api/photos/category", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: photo.id, category }),
+      }).catch(() => null);
+      if (!res || !res.ok) {
+        setPhotos((prev) =>
+          prev.map((p) => (p.id === photo.id ? { ...p, category: photo.category } : p))
+        );
+      } else {
+        router.refresh();
+      }
+    },
+    [router]
+  );
 
   return (
     <div className="flex flex-1 flex-col">
-      <FilterBar
-        active={filter}
-        onChange={setFilter}
-        showOnlyPicked={pickedOnly}
-        onTogglePicked={() => setPickedOnly((v) => !v)}
-        onSync={runSync}
-        progress={progress}
-      />
+      <FilterBar active={filter} onChange={setFilter} onSync={runSync} progress={progress} />
 
       <div className="flex items-center justify-between px-4 py-2 text-sm text-zinc-500">
-        <span>{filtered.length} photos</span>
+        <span>
+          {filtered.length} photos{filter !== "all" ? ` in ${labelFor(filter)}` : ""}
+        </span>
         <div className="flex items-center gap-2">
           {userEmail}
           <form action="/auth/signout" method="post">
@@ -82,7 +82,7 @@ export function BoardClient({
 
       {groups.length === 0 ? (
         <p className="px-4 py-16 text-center text-zinc-400">
-          No photos yet. Click “Sync now” to pull them in from Drive.
+          No photos yet. Click “Sync &amp; sort” to pull them in from Drive.
         </p>
       ) : (
         <div className="grid grid-cols-2 gap-3 p-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
@@ -95,15 +95,9 @@ export function BoardClient({
               <PhotoTile
                 key={p.id}
                 photo={p}
-                onTogglePick={togglePick}
-                extraCount={
-                  !isOpen && idx === 0 && group.length > 1
-                    ? group.length - 1
-                    : undefined
-                }
-                onExpand={() =>
-                  setExpanded((s) => new Set(s).add(key))
-                }
+                onReclassify={reclassify}
+                extraCount={!isOpen && idx === 0 && group.length > 1 ? group.length - 1 : undefined}
+                onExpand={() => setExpanded((s) => new Set(s).add(key))}
               />
             ));
           })}

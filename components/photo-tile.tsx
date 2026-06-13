@@ -1,15 +1,16 @@
 "use client";
 
+import { CATEGORIES } from "@/lib/categories";
 import type { Photo } from "@/lib/types";
 
 interface Props {
   photo: Photo;
-  onTogglePick: (photo: Photo) => void;
+  onReclassify: (photo: Photo, category: string) => void;
   extraCount?: number;
   onExpand?: () => void;
 }
 
-export function PhotoTile({ photo, onTogglePick, extraCount, onExpand }: Props) {
+export function PhotoTile({ photo, onReclassify, extraCount, onExpand }: Props) {
   return (
     <div className="relative aspect-square overflow-hidden rounded-lg border border-zinc-200 bg-zinc-100">
       {/* Thumbnails are pre-sized; serve them plainly, not through next/image. */}
@@ -21,12 +22,6 @@ export function PhotoTile({ photo, onTogglePick, extraCount, onExpand }: Props) 
         className="h-full w-full object-cover"
       />
 
-      {photo.tags?.[0] && (
-        <span className="absolute left-2 top-2 rounded bg-black/60 px-2 py-0.5 text-xs capitalize text-white">
-          {photo.tags[0]}
-        </span>
-      )}
-
       {extraCount ? (
         <button
           onClick={onExpand}
@@ -36,14 +31,26 @@ export function PhotoTile({ photo, onTogglePick, extraCount, onExpand }: Props) 
         </button>
       ) : null}
 
-      <button
-        onClick={() => onTogglePick(photo)}
-        className={`absolute bottom-2 right-2 rounded-full px-3 py-1 text-sm font-medium shadow ${
-          photo.picked ? "bg-emerald-500 text-white" : "bg-white/90 text-zinc-800"
-        }`}
-      >
-        {photo.picked ? "✓ Picked" : "Pick"}
-      </button>
+      {!photo.current_folder_id && (
+        <span className="absolute left-2 top-2 rounded bg-amber-500/90 px-2 py-0.5 text-xs text-white">
+          not moved
+        </span>
+      )}
+
+      {/* The category dropdown IS the correction control: change it → the file moves. */}
+      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-2">
+        <select
+          value={photo.category ?? "unsorted"}
+          onChange={(e) => onReclassify(photo, e.target.value)}
+          className="w-full rounded bg-white/95 px-2 py-1 text-sm text-zinc-800"
+        >
+          {CATEGORIES.map((c) => (
+            <option key={c.key} value={c.key}>
+              {c.label}
+            </option>
+          ))}
+        </select>
+      </div>
     </div>
   );
 }

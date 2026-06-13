@@ -11,3 +11,10 @@ export async function fetchDriveFile(fileId: string): Promise<Buffer> {
   );
   return Buffer.from(res.data as ArrayBuffer);
 }
+
+// Cheap metadata lookup — lets us tell videos from photos before downloading anything.
+export async function getMimeType(fileId: string): Promise<string> {
+  const drive = createDriveClient();
+  const res = await drive.files.get({ fileId, fields: "mimeType", supportsAllDrives: true });
+  return res.data.mimeType ?? "";
+}

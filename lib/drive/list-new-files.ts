@@ -36,7 +36,7 @@ export async function listImagesRecursive(folderId: string): Promise<DriveImage[
         if (!f.id) continue;
         if (f.mimeType === FOLDER_MIME) {
           queue.push(f.id);
-        } else if (f.mimeType?.startsWith("image/")) {
+        } else if (f.mimeType?.startsWith("image/") || f.mimeType?.startsWith("video/")) {
           images.push({ id: f.id, name: f.name ?? f.id, mimeType: f.mimeType });
         }
       }

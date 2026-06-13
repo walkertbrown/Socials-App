@@ -1,20 +1,17 @@
 import "server-only";
 import { google } from "googleapis";
 
-// Read-only Drive client authenticated as a service account.
-// The venue folder must be shared with the service account's email.
+// Drive client authenticated AS the owner (walkertbrown@gmail.com) via OAuth.
+// Acting as the owner is what lets the app MOVE photos into the category folders —
+// a service account couldn't, because it didn't own the files.
 export function createDriveClient() {
-  const email = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
-  const rawKey = process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY;
-  if (!email || !rawKey) {
-    throw new Error("Missing Google service account env vars");
+  const clientId = process.env.GOOGLE_OAUTH_CLIENT_ID;
+  const clientSecret = process.env.GOOGLE_OAUTH_CLIENT_SECRET;
+  const refreshToken = process.env.GOOGLE_OAUTH_REFRESH_TOKEN;
+  if (!clientId || !clientSecret || !refreshToken) {
+    throw new Error("Missing Google OAuth env vars (client id / secret / refresh token)");
   }
-  // Env vars store the key with literal \n; turn them back into newlines.
-  const key = rawKey.replace(/\\n/g, "\n");
-  const auth = new google.auth.JWT({
-    email,
-    key,
-    scopes: ["https://www.googleapis.com/auth/drive.readonly"],
-  });
+  const auth = new google.auth.OAuth2(clientId, clientSecret);
+  auth.setCredentials({ refresh_token: refreshToken });
   return google.drive({ version: "v3", auth });
 }

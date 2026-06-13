@@ -37,6 +37,7 @@ export async function getReadyPhotos(): Promise<Photo[]> {
     .from("photos")
     .select("*")
     .eq("status", "ready")
+    .neq("category", "videos")
     .order("created_at", { ascending: false });
   return (data ?? []) as Photo[];
 }

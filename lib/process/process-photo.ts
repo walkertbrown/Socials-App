@@ -5,6 +5,7 @@ import { createThumbnail, storeThumbnail } from "@/lib/process/make-thumbnail";
 import { hashAndGroup } from "@/lib/process/perceptual-hash";
 import { categorizePhoto } from "@/lib/process/vision-tag";
 import { moveFile } from "@/lib/drive/move-file";
+import { describeAndRename } from "@/lib/process/describe-video";
 
 export interface ProcessResult {
   id: string;
@@ -21,7 +22,7 @@ export async function processOnePhoto(photoId: string): Promise<ProcessResult> {
 
   const { data: photo } = await supabase
     .from("photos")
-    .select("id, drive_file_id, status, category")
+    .select("id, drive_file_id, drive_name, status, category")
     .eq("id", photoId)
     .maybeSingle();
   if (!photo) throw new Error("Photo not found");
@@ -41,6 +42,12 @@ export async function processOnePhoto(photoId: string): Promise<ProcessResult> {
   // Videos: no download/thumbnail/AI — just move them into the Videos folder.
   const mimeType = await getMimeType(photo.drive_file_id);
   if (mimeType.startsWith("video/")) {
+    // Best-effort: name the video from its frames (needs ffmpeg; skip silently if unavailable).
+    try {
+      await describeAndRename(photo.drive_file_id, photo.drive_name ?? "");
+    } catch {
+      /* naming is optional — keep going and just move it */
+    }
     let currentFolderId: string | null = null;
     const dest = folderMap["videos"];
     if (dest) {

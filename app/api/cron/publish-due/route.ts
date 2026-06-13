@@ -8,6 +8,10 @@ import { startVideoPublish, advanceVideoPublish } from "@/lib/publish/publish-vi
 import { sweepStaleStagedImages } from "@/lib/publish/cleanup-image";
 import { sweepStaleStagedVideos } from "@/lib/publish/cleanup-video";
 import { recoverStuck } from "@/lib/publish/recover-stuck";
+import { syncInsights } from "@/lib/learn/sync-insights";
+import { refreshHashtagVocab } from "@/lib/learn/hashtag-vocab";
+import { maybeRefreshStyleNote } from "@/lib/learn/edit-pattern";
+import { refreshPairCount } from "@/lib/db/style-note";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -66,6 +70,23 @@ export async function GET(request: NextRequest) {
   await recoverStuck();
   await sweepStaleStagedImages();
   await sweepStaleStagedVideos();
+
+  // ── 6. Learning loop maintenance ─────────────────────────────────────────────
+  // Each step is independently wrapped — a failure in one must never abort the
+  // others or break publishing.  All are no-ops when Meta isn't connected or the
+  // migration hasn't run yet.
+
+  // 6a. Recount draft/final pairs so the style-note gate has a fresh number.
+  try { await refreshPairCount(); } catch { /* non-fatal */ }
+
+  // 6b. Sync Meta engagement metrics (no-ops when Meta isn't connected).
+  try { await syncInsights(); } catch { /* non-fatal */ }
+
+  // 6c. Rebuild hashtag vocabulary from posted captions.
+  try { await refreshHashtagVocab(); } catch { /* non-fatal */ }
+
+  // 6d. Possibly regenerate the style note (double-gated: ≥5 pairs AND ≥24h).
+  try { await maybeRefreshStyleNote(); } catch { /* non-fatal */ }
 
   return NextResponse.json({ published, videosStarted, videosAdvanced, reminded });
 }

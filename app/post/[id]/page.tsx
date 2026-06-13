@@ -26,6 +26,7 @@ export default async function PostTimePage({ params }: { params: Promise<{ id: s
       // platform is now a single string per row.
       platforms={[post.platform]}
       done={post.status === "posted"}
+      isExemplar={post.is_exemplar}
     />
   );
 }

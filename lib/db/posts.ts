@@ -33,6 +33,12 @@ export interface ScheduledPost {
   created_at: string;
   published_at: string | null;
   notified_at: string | null;
+  // Learning loop (0007): capture what the AI drafted vs what she finally posted.
+  ai_draft: string | null;
+  is_exemplar: boolean;
+  // Insights staleness tracking.
+  insights_fetched_at: string | null;
+  insights_final: boolean;
 }
 
 // Create a single scheduled post for one platform.
@@ -44,6 +50,8 @@ export async function createPost(input: {
   media_type?: "image" | "video";
   scheduled_at: string;
   delivery?: "auto" | "reminder";
+  // The raw AI draft before she edited it — diff source for the learning loop.
+  ai_draft?: string | null;
 }): Promise<ScheduledPost> {
   const sb = createAdminClient();
   const { data, error } = await sb
@@ -69,6 +77,8 @@ export async function createPostGroup(
     media_type: "image" | "video";
     scheduled_at: string;
     delivery: "auto" | "reminder";
+    // The raw AI draft before she edited it — diff source for the learning loop.
+    ai_draft?: string | null;
   }>,
   postGroupId: string
 ): Promise<ScheduledPost[]> {
@@ -180,4 +190,10 @@ export async function retryPost(id: string): Promise<void> {
     .update({ status: "scheduled", attempts: 0, error: null })
     .eq("id", id)
     .eq("status", "failed");
+}
+
+// Toggle exemplar status — pinned posts are always included in the voice corpus.
+export async function setExemplar(id: string, value: boolean): Promise<void> {
+  const sb = createAdminClient();
+  await sb.from("scheduled_posts").update({ is_exemplar: value }).eq("id", id);
 }

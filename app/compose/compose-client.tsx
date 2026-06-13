@@ -27,6 +27,9 @@ export function ComposeClient({ photos }: { photos: Photo[] }) {
   const [matchedIds, setMatchedIds] = useState<string[] | null>(null);
   const [searching, setSearching] = useState(false);
   const [caption, setCaption] = useState("");
+  // aiDraft holds the exact AI-generated text. It's set once on "Draft with AI"
+  // and never overwritten by her edits — so we can diff draft vs final later.
+  const [aiDraft, setAiDraft] = useState<string | null>(null);
   const [drafting, setDrafting] = useState(false);
   const [sharedWhen, setSharedWhen] = useState("");
   // ONE auto/remind toggle for the whole post.
@@ -131,6 +134,8 @@ export function ComposeClient({ photos }: { photos: Photo[] }) {
       });
       const d = await res.json();
       if (!res.ok) throw new Error(d.error || "Failed");
+      // Store draft separate from caption so edits don't overwrite the AI original.
+      setAiDraft(d.caption);
       setCaption(d.caption);
     } catch {
       setMsg("Couldn't draft a caption — try again.");
@@ -151,6 +156,9 @@ export function ComposeClient({ photos }: { photos: Photo[] }) {
       const payload = {
         photo_id: selected,
         caption,
+        // Send the original AI draft so it can be persisted alongside the final
+        // caption — the diff is the learning signal for future drafts.
+        ai_draft: aiDraft ?? undefined,
         media_type: mediaType,
         post_group_id: postGroupId,
         items: items.map((item) => ({

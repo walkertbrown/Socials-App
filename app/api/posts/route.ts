@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
   if (!user) return new NextResponse("Unauthorized", { status: 401 });
 
   const body = await request.json();
-  const { photo_id, caption, media_type, post_group_id, items } = body;
+  const { photo_id, caption, ai_draft, media_type, post_group_id, items } = body;
 
   if (typeof photo_id !== "string") {
     return NextResponse.json({ error: "photo_id is required" }, { status: 400 });
@@ -49,6 +49,8 @@ export async function POST(request: NextRequest) {
     (item: { platform: string; scheduled_at: string; delivery?: string }) => ({
       photo_id,
       caption: caption ?? "",
+      // Persist the AI draft alongside the final caption — diff is how we learn.
+      ai_draft: typeof ai_draft === "string" ? ai_draft : null,
       platform: item.platform,
       media_type: resolvedMediaType,
       scheduled_at: item.scheduled_at,

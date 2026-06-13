@@ -10,15 +10,20 @@ interface Props {
   caption: string;
   platforms: string[];
   done: boolean;
+  // Whether this post is pinned as a voice-corpus exemplar for future AI drafts.
+  isExemplar?: boolean;
 }
 
 // Three taps to post: save the video, copy the caption, open Instagram. Then she
 // confirms with "Mark as posted" (the app can't see the manual post itself).
-export function PostClient({ id, photoId, caption, platforms, done }: Props) {
+export function PostClient({ id, photoId, caption, platforms, done, isExemplar = false }: Props) {
   const router = useRouter();
   const [copied, setCopied] = useState(false);
   const [posted, setPosted] = useState(done);
   const [saving, setSaving] = useState(false);
+  // Exemplar toggle: ⭐ pins this post into the AI voice corpus permanently.
+  const [exemplar, setExemplar] = useState(isExemplar);
+  const [exemplarSaving, setExemplarSaving] = useState(false);
 
   async function copyCaption() {
     try {
@@ -36,6 +41,24 @@ export function PostClient({ id, photoId, caption, platforms, done }: Props) {
     setPosted(true);
     setSaving(false);
     router.refresh();
+  }
+
+  // Toggle the exemplar pin.  Exemplar posts are always included in the AI voice
+  // corpus so future drafts learn from captions she considers best-in-class.
+  async function toggleExemplar() {
+    setExemplarSaving(true);
+    const next = !exemplar;
+    try {
+      await fetch(`/api/posts/${id}/exemplar`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ exemplar: next }),
+      });
+      setExemplar(next);
+    } catch {
+      /* non-fatal — the star just doesn't flip */
+    }
+    setExemplarSaving(false);
   }
 
   return (
@@ -100,6 +123,23 @@ export function PostClient({ id, photoId, caption, platforms, done }: Props) {
           {saving ? "Saving…" : "✓ Mark as posted"}
         </button>
       )}
+
+      {/* Exemplar toggle: pin this caption into the AI voice corpus */}
+      <div className="flex items-center gap-2">
+        <button
+          onClick={toggleExemplar}
+          disabled={exemplarSaving}
+          title={exemplar ? "Remove from AI voice examples" : "Pin as AI voice example"}
+          className={`text-xl disabled:opacity-40 ${exemplar ? "text-yellow-400" : "text-zinc-300"}`}
+        >
+          ★
+        </button>
+        <span className="text-xs text-zinc-500">
+          {exemplar
+            ? "Pinned as a voice example — AI will always use this caption style"
+            : "Pin as a voice example for future AI drafts"}
+        </span>
+      </div>
 
       <Link href="/posts" className="text-center text-xs text-zinc-400 underline">
         ← All posts

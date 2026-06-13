@@ -6,7 +6,8 @@ import { sendPushToAll } from "@/lib/notify/web-push";
 // notification opens the post-time screen for that post.
 export async function sendReminder(post: ScheduledPost): Promise<number> {
   const base = process.env.NEXT_PUBLIC_APP_URL || "";
-  const where = post.platforms.join(" + ");
+  // post.platform is now a single string (one row per platform).
+  const where = post.platform;
   return sendPushToAll({
     title: "Time to post your video 🎬",
     body: `Tap to grab the video + caption for ${where}.`,

@@ -3,35 +3,15 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import type { ScheduledPost } from "@/lib/db/posts";
+import type { PostGroup } from "@/lib/db/post-groups";
 import { utcToCentral } from "@/lib/time";
 import { EnableNotifications } from "@/components/enable-notifications";
+import { PostGroupCard } from "@/components/post-group-card";
 
-const STATUS_STYLES: Record<string, string> = {
-  scheduled: "bg-blue-100 text-blue-700",
-  publishing: "bg-amber-100 text-amber-700",
-  published: "bg-emerald-100 text-emerald-700",
-  failed: "bg-red-100 text-red-700",
-  canceled: "bg-zinc-200 text-zinc-500",
-  reminder_sent: "bg-amber-100 text-amber-700",
-  posted: "bg-emerald-100 text-emerald-700",
-};
-
-// Friendly label per status, with reminder (video) posts reading differently
-// from auto-published (photo) posts.
-function statusLabel(p: ScheduledPost): string {
-  if (p.delivery === "reminder") {
-    if (p.status === "scheduled") return "reminder";
-    if (p.status === "reminder_sent") return "tap to post";
-    if (p.status === "posted") return "posted ✓";
-  }
-  return p.status;
-}
-
-export function PostsClient({ initialPosts }: { initialPosts: ScheduledPost[] }) {
+export function PostsClient({ initialGroups }: { initialGroups: PostGroup[] }) {
   const router = useRouter();
-  const [posts, setPosts] = useState(initialPosts);
-  useEffect(() => setPosts(initialPosts), [initialPosts]);
+  const [groups, setGroups] = useState(initialGroups);
+  useEffect(() => setGroups(initialGroups), [initialGroups]);
 
   const act = useCallback(
     async (id: string, action: "cancel" | "retry") => {
@@ -60,54 +40,17 @@ export function PostsClient({ initialPosts }: { initialPosts: ScheduledPost[] })
         </div>
       </div>
 
-      {posts.length === 0 && (
-        <p className="py-16 text-center text-zinc-400">No posts yet. Click “New post.”</p>
+      {groups.length === 0 && (
+        <p className="py-16 text-center text-zinc-400">No posts yet. Click "New post."</p>
       )}
 
-      {posts.map((p) => {
-        const isReminder = p.delivery === "reminder";
-        const needsPosting = isReminder && p.status === "reminder_sent";
-        return (
-          <div key={p.id} className="flex gap-3 rounded-lg border border-zinc-200 p-3">
-            {p.photo_id && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={`/api/thumb/${p.photo_id}`} alt="" className="h-16 w-16 shrink-0 rounded object-cover" />
-            )}
-            <div className="min-w-0 flex-1">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className={`rounded px-2 py-0.5 text-xs capitalize ${STATUS_STYLES[p.status] ?? ""}`}>
-                  {statusLabel(p)}
-                </span>
-                {isReminder && <span className="text-xs text-zinc-400">🎬 video</span>}
-                <span className="text-xs text-zinc-500">
-                  {utcToCentral(p.scheduled_at)} · {p.platforms.join(" + ")}
-                </span>
-              </div>
-              <p className="mt-1 line-clamp-2 text-sm text-zinc-700">
-                {p.caption || <span className="text-zinc-400">No caption</span>}
-              </p>
-              {p.error && <p className="mt-1 text-xs text-red-600">{p.error}</p>}
-            </div>
-            <div className="flex flex-col gap-1">
-              {needsPosting && (
-                <Link href={`/post/${p.id}`} className="text-xs font-medium text-pink-600 underline">
-                  Post now →
-                </Link>
-              )}
-              {p.status === "scheduled" && (
-                <button onClick={() => act(p.id, "cancel")} className="text-xs text-zinc-500 underline">
-                  Cancel
-                </button>
-              )}
-              {p.status === "failed" && (
-                <button onClick={() => act(p.id, "retry")} className="text-xs text-blue-600 underline">
-                  Retry
-                </button>
-              )}
-            </div>
-          </div>
-        );
-      })}
+      {groups.map((g) => (
+        <PostGroupCard key={g.post_group_id} group={g} onAct={act} />
+      ))}
     </div>
   );
 }
+
+// Keep the old single-post time display utility available for any remaining call
+// sites during migration.
+export { utcToCentral };

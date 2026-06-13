@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { listPosts } from "@/lib/db/posts";
+import { listPostGroups } from "@/lib/db/post-groups";
 import { PostsClient } from "@/app/posts/posts-client";
 
 export const dynamic = "force-dynamic";
@@ -12,6 +12,6 @@ export default async function PostsPage() {
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const posts = await listPosts();
-  return <PostsClient initialPosts={posts} />;
+  const groups = await listPostGroups();
+  return <PostsClient initialGroups={groups} />;
 }

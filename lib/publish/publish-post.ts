@@ -8,8 +8,9 @@ import { cleanupImage } from "@/lib/publish/cleanup-image";
 import { publishToFacebook } from "@/lib/meta/publish-facebook";
 import { publishToInstagram } from "@/lib/meta/publish-instagram";
 
-// Publishes ONE post that's already been claimed (status 'publishing'). Stages
-// the image, posts to each chosen platform, records the outcome, and ALWAYS
+// Publishes ONE photo post that's already been claimed (status 'publishing').
+// Each row has a single platform — this dispatches to the right publisher.
+// Stages the image, posts to the ONE platform, records the outcome, and ALWAYS
 // cleans up the staged public image.
 export async function publishPost(post: ScheduledPost): Promise<void> {
   if (!post.photo_id) {
@@ -35,13 +36,17 @@ export async function publishPost(post: ScheduledPost): Promise<void> {
 
     let fbId: string | null = null;
     let igId: string | null = null;
-    if (post.platforms.includes("facebook")) {
+
+    // Each row is for exactly ONE platform — no array check needed.
+    if (post.platform === "facebook") {
       fbId = await publishToFacebook(creds.page_id!, creds.page_token!, staged.url, post.caption);
-    }
-    if (post.platforms.includes("instagram")) {
+    } else if (post.platform === "instagram") {
       if (!creds.ig_user_id) throw new Error("No Instagram account is connected");
       igId = await publishToInstagram(creds.ig_user_id, creds.page_token!, staged.url, post.caption);
+    } else {
+      throw new Error(`Unknown platform: ${post.platform}`);
     }
+
     await markPublished(post.id, { fb_post_id: fbId, ig_post_id: igId });
   } catch (e) {
     await recordFailure(post.id, post.attempts, (e as Error).message);

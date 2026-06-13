@@ -1,14 +1,24 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import type { Photo } from "@/lib/types";
 import { PhotoPicker } from "@/components/photo-picker";
+import { PlatformSchedule, type PlatformItem } from "@/components/platform-schedule";
 import { centralToUtcIso } from "@/lib/time";
 
-// One-tap shortcuts that fill the intent box and search immediately.
 const QUICK_TAGS = ["staff", "cocktails", "food", "patio", "events", "wine"];
+
+// Build the initial items array (both platforms, shared time, not overridden).
+function makeItems(when: string, delivery: "auto" | "reminder"): PlatformItem[] {
+  return ["instagram", "facebook"].map((p) => ({
+    platform: p,
+    scheduled_at: when,
+    delivery,
+    overridden: false,
+  }));
+}
 
 export function ComposeClient({ photos }: { photos: Photo[] }) {
   const router = useRouter();
@@ -18,18 +28,69 @@ export function ComposeClient({ photos }: { photos: Photo[] }) {
   const [searching, setSearching] = useState(false);
   const [caption, setCaption] = useState("");
   const [drafting, setDrafting] = useState(false);
-  const [platforms, setPlatforms] = useState<string[]>(["instagram", "facebook"]);
-  const [when, setWhen] = useState("");
+  const [sharedWhen, setSharedWhen] = useState("");
+  // ONE auto/remind toggle for the whole post.
+  const [delivery, setDelivery] = useState<"auto" | "reminder">("auto");
+  const [items, setItems] = useState<PlatformItem[]>(makeItems("", "auto"));
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
-  const togglePlatform = (p: string) =>
-    setPlatforms((prev) => (prev.includes(p) ? prev.filter((x) => x !== p) : [...prev, p]));
-
-  // A video gets the "reminder" treatment: we ping her phone at post time instead
-  // of auto-publishing, so she can add trending audio in Instagram herself.
   const selectedPhoto = photos.find((p) => p.id === selected);
   const isVideo = selectedPhoto?.category === "videos";
+
+  // When a video is selected, default delivery to auto (Reel); user can override.
+  // We don't auto-flip if they've already chosen — only on fresh selection.
+  const handleSelect = useCallback(
+    (id: string | null) => {
+      setSelected(id);
+      if (id) {
+        const photo = photos.find((p) => p.id === id);
+        const defaultDelivery = photo?.category === "videos" ? "auto" : "auto";
+        setDelivery(defaultDelivery);
+        setItems((prev) => prev.map((item) => ({ ...item, delivery: defaultDelivery })));
+      }
+    },
+    [photos]
+  );
+
+  // Shared time change: only update items that have NOT been individually overridden.
+  function handleSharedWhenChange(when: string) {
+    setSharedWhen(when);
+    setItems((prev) =>
+      prev.map((item) => (item.overridden ? item : { ...item, scheduled_at: when }))
+    );
+  }
+
+  // Per-platform override: mark as overridden so shared changes don't clobber it.
+  function handleItemChange(platform: string, when: string) {
+    setItems((prev) =>
+      prev.map((item) =>
+        item.platform === platform ? { ...item, scheduled_at: when, overridden: true } : item
+      )
+    );
+  }
+
+  // Toggle a platform on/off.
+  function handleTogglePlatform(platform: string) {
+    setItems((prev) => {
+      const exists = prev.find((i) => i.platform === platform);
+      if (exists) {
+        // Must keep at least one platform.
+        if (prev.length <= 1) return prev;
+        return prev.filter((i) => i.platform !== platform);
+      }
+      return [
+        ...prev,
+        { platform, scheduled_at: sharedWhen, delivery, overridden: false },
+      ];
+    });
+  }
+
+  // Delivery toggle change: update all items.
+  function handleDeliveryChange(d: "auto" | "reminder") {
+    setDelivery(d);
+    setItems((prev) => prev.map((item) => ({ ...item, delivery: d })));
+  }
 
   async function findPhotos(term?: string) {
     const query = (term ?? intent).trim();
@@ -66,7 +127,6 @@ export function ComposeClient({ photos }: { photos: Photo[] }) {
       const res = await fetch("/api/posts/draft-caption", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        // Hand the intent to the caption writer so it's aimed at what she wants.
         body: JSON.stringify({ photoId: selected, intent: intent.trim() || undefined }),
       });
       const d = await res.json();
@@ -79,22 +139,30 @@ export function ComposeClient({ photos }: { photos: Photo[] }) {
   }
 
   async function schedule() {
-    if (!selected) return setMsg("Pick a photo first.");
-    if (!platforms.length) return setMsg("Pick at least one platform.");
-    if (!when) return setMsg("Pick a date and time.");
+    if (!selected) return setMsg("Pick a photo or video first.");
+    if (!items.length) return setMsg("Pick at least one platform.");
+    if (items.some((i) => !i.scheduled_at)) return setMsg("Set a time for each platform.");
     setSaving(true);
     setMsg(null);
     try {
+      const postGroupId = crypto.randomUUID();
+      const mediaType = isVideo ? "video" : "image";
+      // Build one item per platform.
+      const payload = {
+        photo_id: selected,
+        caption,
+        media_type: mediaType,
+        post_group_id: postGroupId,
+        items: items.map((item) => ({
+          platform: item.platform,
+          scheduled_at: centralToUtcIso(item.scheduled_at),
+          delivery: item.delivery,
+        })),
+      };
       const res = await fetch("/api/posts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          photo_id: selected,
-          caption,
-          platforms,
-          scheduled_at: centralToUtcIso(when),
-          delivery: isVideo ? "reminder" : "auto",
-        }),
+        body: JSON.stringify(payload),
       });
       if (!res.ok) {
         const e = await res.json().catch(() => ({}));
@@ -116,6 +184,7 @@ export function ComposeClient({ photos }: { photos: Photo[] }) {
         </Link>
       </div>
 
+      {/* 1. Intent search */}
       <section>
         <p className="mb-2 text-sm font-medium text-zinc-700">1. What do you want to post about?</p>
         <div className="flex gap-2">
@@ -145,26 +214,26 @@ export function ComposeClient({ photos }: { photos: Photo[] }) {
             </button>
           ))}
         </div>
-        <p className="mt-2 text-xs text-zinc-400">Optional — leave blank to just browse everything below.</p>
+        <p className="mt-2 text-xs text-zinc-400">Optional — leave blank to browse everything.</p>
       </section>
 
+      {/* 2. Photo / video picker */}
       <section>
         <div className="mb-2 flex items-center justify-between">
-          <p className="text-sm font-medium text-zinc-700">2. Pick a photo</p>
+          <p className="text-sm font-medium text-zinc-700">2. Pick a photo or video</p>
           {matchedIds !== null && (
             <button onClick={clearSearch} className="text-xs text-zinc-500 underline">
-              Showing matches{intent.trim() ? ` for “${intent.trim()}”` : ""} · clear
+              Showing matches{intent.trim() ? ` for "${intent.trim()}"` : ""} · clear
             </button>
           )}
         </div>
-        <PhotoPicker photos={photos} selectedId={selected} onSelect={setSelected} matchedIds={matchedIds} />
+        <PhotoPicker photos={photos} selectedId={selected} onSelect={handleSelect} matchedIds={matchedIds} />
       </section>
 
+      {/* Video preview */}
       {isVideo && selected && (
         <section>
           <p className="mb-2 text-sm font-medium text-zinc-700">Preview</p>
-          {/* Plays straight from Drive (streamed through the app). Sized to the clip's
-              own aspect ratio — vertical clips stay vertical, no letterboxing. */}
           <div className="flex justify-center">
             <video
               key={selected}
@@ -178,6 +247,7 @@ export function ComposeClient({ photos }: { photos: Photo[] }) {
         </section>
       )}
 
+      {/* 3. Caption */}
       <section>
         <div className="mb-2 flex items-center justify-between">
           <p className="text-sm font-medium text-zinc-700">3. Caption</p>
@@ -198,38 +268,40 @@ export function ComposeClient({ photos }: { photos: Photo[] }) {
         />
       </section>
 
-      <section>
-        <p className="mb-2 text-sm font-medium text-zinc-700">4. Where</p>
-        <div className="flex gap-2">
-          {["instagram", "facebook"].map((p) => (
-            <button
-              key={p}
-              onClick={() => togglePlatform(p)}
-              className={`rounded-full px-4 py-1.5 text-sm capitalize ${
-                platforms.includes(p) ? "bg-blue-600 text-white" : "bg-zinc-100 text-zinc-600"
-              }`}
-            >
-              {p}
-            </button>
-          ))}
-        </div>
-      </section>
+      {/* 4+5. Platform + time (per-platform) */}
+      <PlatformSchedule
+        items={items}
+        sharedWhen={sharedWhen}
+        onSharedWhenChange={handleSharedWhenChange}
+        onItemChange={handleItemChange}
+        onTogglePlatform={handleTogglePlatform}
+        isVideo={isVideo}
+      />
 
-      <section>
-        <p className="mb-2 text-sm font-medium text-zinc-700">5. When (Central Time)</p>
-        <input
-          type="datetime-local"
-          value={when}
-          onChange={(e) => setWhen(e.target.value)}
-          className="rounded-md border border-zinc-300 p-2 text-sm"
-        />
-      </section>
-
-      {isVideo && (
-        <p className="rounded-md bg-amber-50 p-2 text-xs text-amber-800">
-          📱 This is a video — at this time we’ll <strong>ping your phone</strong> to post it yourself
-          (so you can add trending audio). It won’t auto-publish.
-        </p>
+      {/* Video delivery toggle (whole-post, not per-platform) */}
+      {isVideo && selected && (
+        <section>
+          <p className="mb-2 text-sm font-medium text-zinc-700">Video publish mode</p>
+          <div className="flex gap-2">
+            {(["auto", "reminder"] as const).map((d) => (
+              <button
+                key={d}
+                type="button"
+                onClick={() => handleDeliveryChange(d)}
+                className={`rounded-full px-4 py-1.5 text-sm ${
+                  delivery === d ? "bg-blue-600 text-white" : "bg-zinc-100 text-zinc-600"
+                }`}
+              >
+                {d === "auto" ? "Post it for me (Reel)" : "Remind me"}
+              </button>
+            ))}
+          </div>
+          {delivery === "reminder" && (
+            <p className="mt-1 text-xs text-zinc-500">
+              We will ping your phone at the scheduled time so you can add trending audio and post it yourself.
+            </p>
+          )}
+        </section>
       )}
 
       {msg && <p className="text-sm text-red-600">{msg}</p>}
@@ -239,7 +311,7 @@ export function ComposeClient({ photos }: { photos: Photo[] }) {
         disabled={saving}
         className="rounded-md bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white disabled:opacity-50"
       >
-        {saving ? "Scheduling…" : isVideo ? "Schedule reminder" : "Schedule post"}
+        {saving ? "Scheduling…" : "Schedule"}
       </button>
     </div>
   );

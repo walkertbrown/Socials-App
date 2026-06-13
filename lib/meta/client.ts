@@ -1,7 +1,7 @@
 import "server-only";
 import { getMetaCredentials } from "@/lib/db/meta-credentials";
 
-const GRAPH = "https://graph.facebook.com/v21.0";
+const GRAPH = "https://graph.facebook.com/v25.0";
 
 interface GraphOpts {
   method?: "GET" | "POST";

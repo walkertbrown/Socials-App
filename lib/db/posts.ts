@@ -5,9 +5,12 @@ export interface ScheduledPost {
   id: string;
   photo_id: string | null;
   caption: string;
-  platforms: string[];
+  // Per-platform shape (post 0006): one row per platform.
+  platform: string;
+  post_group_id: string | null;
+  media_type: "image" | "video";
   scheduled_at: string;
-  // 'auto' = app publishes it (photos). 'reminder' = app pings her phone (video).
+  // 'auto' = app publishes it (photos + Reels). 'reminder' = app pings her phone.
   delivery: "auto" | "reminder";
   status:
     | "scheduled"
@@ -17,54 +20,95 @@ export interface ScheduledPost {
     | "canceled"
     | "reminder_sent"
     | "posted";
+  // Reel progress lives here so the top-level status stays clean.
+  publish_substate: string | null;
   attempts: number;
   error: string | null;
   fb_post_id: string | null;
   ig_post_id: string | null;
+  // Video Reel staging state.
+  ig_container_id: string | null;
+  fb_video_id: string | null;
+  staged_path: string | null;
   created_at: string;
   published_at: string | null;
   notified_at: string | null;
 }
 
+// Create a single scheduled post for one platform.
 export async function createPost(input: {
   photo_id: string;
   caption: string;
-  platforms: string[];
+  platform: string;
+  post_group_id?: string;
+  media_type?: "image" | "video";
   scheduled_at: string;
   delivery?: "auto" | "reminder";
 }): Promise<ScheduledPost> {
   const sb = createAdminClient();
   const { data, error } = await sb
     .from("scheduled_posts")
-    .insert({ ...input, delivery: input.delivery ?? "auto" })
+    .insert({
+      ...input,
+      media_type: input.media_type ?? "image",
+      delivery: input.delivery ?? "auto",
+    })
     .select("*")
     .single();
   if (error) throw new Error(error.message);
   return data as ScheduledPost;
 }
 
+// Create a group of per-platform rows under one shared post_group_id.
+// Returns all created rows.
+export async function createPostGroup(
+  rows: Array<{
+    photo_id: string;
+    caption: string;
+    platform: string;
+    media_type: "image" | "video";
+    scheduled_at: string;
+    delivery: "auto" | "reminder";
+  }>,
+  postGroupId: string
+): Promise<ScheduledPost[]> {
+  const sb = createAdminClient();
+  const inserts = rows.map((r) => ({ ...r, post_group_id: postGroupId }));
+  const { data, error } = await sb.from("scheduled_posts").insert(inserts).select("*");
+  if (error) throw new Error(error.message);
+  return (data ?? []) as ScheduledPost[];
+}
+
 export async function listPosts(): Promise<ScheduledPost[]> {
   const sb = createAdminClient();
-  const { data } = await sb.from("scheduled_posts").select("*").order("scheduled_at", { ascending: true });
+  const { data } = await sb
+    .from("scheduled_posts")
+    .select("*")
+    .order("scheduled_at", { ascending: true });
   return (data ?? []) as ScheduledPost[];
 }
 
 export async function getPost(id: string): Promise<ScheduledPost | null> {
   const sb = createAdminClient();
-  const { data } = await sb.from("scheduled_posts").select("*").eq("id", id).maybeSingle();
+  const { data } = await sb
+    .from("scheduled_posts")
+    .select("*")
+    .eq("id", id)
+    .maybeSingle();
   return (data as ScheduledPost) ?? null;
 }
 
-// Atomically claim ONE due post: flip scheduled -> publishing only if still
-// scheduled. If another cron tick already grabbed it, this returns null. This is
-// the status-lock that prevents the same post from being published twice.
+// Atomically claim ONE due photo-auto post: flip scheduled -> publishing only if
+// still scheduled. If another cron tick already grabbed it, this returns null.
+// Only picks image/auto rows — video rows go through claimDueVideoPost.
 export async function claimDuePost(): Promise<ScheduledPost | null> {
   const sb = createAdminClient();
   const { data: due } = await sb
     .from("scheduled_posts")
     .select("id")
     .eq("status", "scheduled")
-    .eq("delivery", "auto") // reminders are handled separately, never auto-published
+    .eq("delivery", "auto")
+    .eq("media_type", "image")
     .lte("scheduled_at", new Date().toISOString())
     .order("scheduled_at", { ascending: true })
     .limit(1)
@@ -94,24 +138,39 @@ export async function markPublished(
       fb_post_id: ids.fb_post_id ?? null,
       ig_post_id: ids.ig_post_id ?? null,
       error: null,
+      publish_substate: null,
+      staged_path: null,
     })
     .eq("id", id);
 }
 
 // On failure: give up after 2 attempts (status 'failed'), else return to
 // 'scheduled' for one more try. Never loops forever.
-export async function recordFailure(id: string, attempts: number, error: string): Promise<void> {
+export async function recordFailure(
+  id: string,
+  attempts: number,
+  error: string
+): Promise<void> {
   const sb = createAdminClient();
   const next = attempts + 1;
   await sb
     .from("scheduled_posts")
-    .update({ status: next >= 2 ? "failed" : "scheduled", attempts: next, error })
+    .update({
+      status: next >= 2 ? "failed" : "scheduled",
+      attempts: next,
+      error,
+      publish_substate: null,
+    })
     .eq("id", id);
 }
 
 export async function cancelPost(id: string): Promise<void> {
   const sb = createAdminClient();
-  await sb.from("scheduled_posts").update({ status: "canceled" }).eq("id", id).eq("status", "scheduled");
+  await sb
+    .from("scheduled_posts")
+    .update({ status: "canceled" })
+    .eq("id", id)
+    .eq("status", "scheduled");
 }
 
 export async function retryPost(id: string): Promise<void> {

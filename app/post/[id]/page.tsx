@@ -23,7 +23,8 @@ export default async function PostTimePage({ params }: { params: Promise<{ id: s
       id={post.id}
       photoId={post.photo_id}
       caption={post.caption}
-      platforms={post.platforms}
+      // platform is now a single string per row.
+      platforms={[post.platform]}
       done={post.status === "posted"}
     />
   );

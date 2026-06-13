@@ -16,15 +16,16 @@ const VOICE_EXAMPLES: string[] = [
   "Closed today in observance of Memorial Day. Grateful for everyone who has made The Pelican Club part of their table. Back Wednesday — we'll have a seat waiting for you. #pelicanclubNOLA #memorialday #neworleans #frenchquarterdining",
 ];
 
-// One Claude call: look at the photo + its category, return a caption + hashtags.
-export async function draftCaption(photoId: string): Promise<string> {
+// One Claude call: look at the photo + its category (+ what she wants the post to
+// be about, if she said), return a caption + hashtags.
+export async function draftCaption(photoId: string, intent?: string): Promise<string> {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) throw new Error("Missing ANTHROPIC_API_KEY");
   const supabase = createAdminClient();
 
   const { data: photo } = await supabase
     .from("photos")
-    .select("thumbnail_path, category")
+    .select("thumbnail_path, category, description, tags")
     .eq("id", photoId)
     .maybeSingle();
   if (!photo) throw new Error("Photo not found");
@@ -44,6 +45,16 @@ export async function draftCaption(photoId: string): Promise<string> {
     ? `Match the voice of these real example captions:\n${VOICE_EXAMPLES.map((e) => `- ${e}`).join("\n")}`
     : "Use a warm, inviting, on-brand restaurant/bar social-media voice.";
 
+  // What she typed in the intent box, if anything — the caption should center on this.
+  const intentLine = intent?.trim()
+    ? `The person posting wants this post to be specifically about: "${intent.trim()}". Center the caption on that angle (while staying true to what's actually in the photo). `
+    : "";
+
+  // Stored AI notes about what's in the photo — grounding so the caption stays accurate.
+  const grounding = photo.description
+    ? `For reference, what's visible in the photo: ${photo.description} `
+    : "";
+
   const content = [
     ...(imageData
       ? [
@@ -57,6 +68,8 @@ export async function draftCaption(photoId: string): Promise<string> {
       type: "text" as const,
       text:
         "You write Instagram/Facebook captions for The Pelican Club — an upscale restaurant and bar in the French Quarter, New Orleans, serving since 1990. " +
+        intentLine +
+        grounding +
         `This is a "${labelFor(photo.category ?? "")}" photo. Write ONE caption in the house voice: ` +
         "open with a short hook or vivid line, describe what's in the photo invitingly, add a reservation nudge " +
         '("Reservations at the link in bio" or via OpenTable), use 1-2 emoji, then 4-6 hashtags starting with #PelicanClubNOLA. ' +

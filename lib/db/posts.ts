@@ -7,13 +7,23 @@ export interface ScheduledPost {
   caption: string;
   platforms: string[];
   scheduled_at: string;
-  status: "scheduled" | "publishing" | "published" | "failed" | "canceled";
+  // 'auto' = app publishes it (photos). 'reminder' = app pings her phone (video).
+  delivery: "auto" | "reminder";
+  status:
+    | "scheduled"
+    | "publishing"
+    | "published"
+    | "failed"
+    | "canceled"
+    | "reminder_sent"
+    | "posted";
   attempts: number;
   error: string | null;
   fb_post_id: string | null;
   ig_post_id: string | null;
   created_at: string;
   published_at: string | null;
+  notified_at: string | null;
 }
 
 export async function createPost(input: {
@@ -21,9 +31,14 @@ export async function createPost(input: {
   caption: string;
   platforms: string[];
   scheduled_at: string;
+  delivery?: "auto" | "reminder";
 }): Promise<ScheduledPost> {
   const sb = createAdminClient();
-  const { data, error } = await sb.from("scheduled_posts").insert(input).select("*").single();
+  const { data, error } = await sb
+    .from("scheduled_posts")
+    .insert({ ...input, delivery: input.delivery ?? "auto" })
+    .select("*")
+    .single();
   if (error) throw new Error(error.message);
   return data as ScheduledPost;
 }
@@ -49,6 +64,7 @@ export async function claimDuePost(): Promise<ScheduledPost | null> {
     .from("scheduled_posts")
     .select("id")
     .eq("status", "scheduled")
+    .eq("delivery", "auto") // reminders are handled separately, never auto-published
     .lte("scheduled_at", new Date().toISOString())
     .order("scheduled_at", { ascending: true })
     .limit(1)

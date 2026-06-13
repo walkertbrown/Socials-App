@@ -8,6 +8,7 @@ export interface Photo {
   drive_name: string | null;
   thumbnail_path: string | null;
   tags: string[] | null;
+  description: string | null;
   category: CategoryKey | null;
   current_folder_id: string | null;
   moved_at: string | null;

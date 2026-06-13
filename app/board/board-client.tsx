@@ -65,6 +65,23 @@ export function BoardClient({
     [router]
   );
 
+  // Her tag edits (e.g. adding a staff name): optimistically update, save, revert on failure.
+  const updateTags = useCallback(
+    async (photo: Photo, tags: string[]) => {
+      const prevTags = photo.tags ?? [];
+      setPhotos((prev) => prev.map((p) => (p.id === photo.id ? { ...p, tags } : p)));
+      const res = await fetch("/api/photos/tags", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: photo.id, tags }),
+      }).catch(() => null);
+      if (!res || !res.ok) {
+        setPhotos((prev) => prev.map((p) => (p.id === photo.id ? { ...p, tags: prevTags } : p)));
+      }
+    },
+    []
+  );
+
   return (
     <div className="flex flex-1 flex-col">
       <FilterBar active={filter} onChange={setFilter} onSync={runSync} progress={progress} />
@@ -99,6 +116,7 @@ export function BoardClient({
                 key={p.id}
                 photo={p}
                 onReclassify={reclassify}
+                onUpdateTags={updateTags}
                 extraCount={!isOpen && idx === 0 && group.length > 1 ? group.length - 1 : undefined}
                 onExpand={() => setExpanded((s) => new Set(s).add(key))}
               />

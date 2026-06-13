@@ -14,12 +14,18 @@ export async function POST(request: NextRequest) {
   const user = await getUserOrNull();
   if (!user) return new NextResponse("Unauthorized", { status: 401 });
 
-  const { photo_id, caption, platforms, scheduled_at } = await request.json();
+  const { photo_id, caption, platforms, scheduled_at, delivery } = await request.json();
   if (typeof photo_id !== "string" || !Array.isArray(platforms) || typeof scheduled_at !== "string") {
     return new NextResponse("Bad request", { status: 400 });
   }
   if (!platforms.length) return NextResponse.json({ error: "Pick at least one platform" }, { status: 400 });
 
-  const post = await createPost({ photo_id, caption: caption ?? "", platforms, scheduled_at });
+  const post = await createPost({
+    photo_id,
+    caption: caption ?? "",
+    platforms,
+    scheduled_at,
+    delivery: delivery === "reminder" ? "reminder" : "auto",
+  });
   return NextResponse.json(post);
 }

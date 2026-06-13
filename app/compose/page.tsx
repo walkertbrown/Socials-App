@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { getReadyPhotos } from "@/lib/db/photos";
+import { getReadyPhotos, getReadyVideos } from "@/lib/db/photos";
 import { ComposeClient } from "@/app/compose/compose-client";
 
 export const dynamic = "force-dynamic";
@@ -12,6 +12,6 @@ export default async function ComposePage() {
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const photos = await getReadyPhotos();
-  return <ComposeClient photos={photos} />;
+  const [photos, videos] = await Promise.all([getReadyPhotos(), getReadyVideos()]);
+  return <ComposeClient photos={[...photos, ...videos]} />;
 }

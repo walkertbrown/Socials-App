@@ -10,11 +10,11 @@ export async function POST(request: NextRequest) {
   const user = await getUserOrNull();
   if (!user) return new NextResponse("Unauthorized", { status: 401 });
 
-  const { photoId } = await request.json();
+  const { photoId, intent } = await request.json();
   if (typeof photoId !== "string") return new NextResponse("Bad request", { status: 400 });
 
   try {
-    const raw = await draftCaption(photoId);
+    const raw = await draftCaption(photoId, typeof intent === "string" ? intent : undefined);
     const caption = await editCaption(raw); // second pass: de-AI-ify
     return NextResponse.json({ caption });
   } catch (e) {

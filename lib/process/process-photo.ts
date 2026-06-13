@@ -3,9 +3,9 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { fetchDriveFile, getMimeType } from "@/lib/drive/fetch-file";
 import { createThumbnail, storeThumbnail } from "@/lib/process/make-thumbnail";
 import { hashAndGroup } from "@/lib/process/perceptual-hash";
-import { categorizePhoto } from "@/lib/process/vision-tag";
+import { analyzePhoto } from "@/lib/process/vision-tag";
 import { moveFile } from "@/lib/drive/move-file";
-import { describeAndRename } from "@/lib/process/describe-video";
+import { makeVideoThumbnail } from "@/lib/process/video-thumbnail";
 
 export interface ProcessResult {
   id: string;
@@ -39,15 +39,24 @@ export async function processOnePhoto(photoId: string): Promise<ProcessResult> {
     .maybeSingle();
   const folderMap: Record<string, string> = config?.category_folder_map ?? {};
 
-  // Videos: no download/thumbnail/AI — just move them into the Videos folder.
+  // Videos: skip the photo pipeline. Pull ONE frame by streaming (never download
+  // the whole video) for a preview thumbnail + a search description, then sweep it
+  // into the Videos folder. All best-effort — a missing frame won't block the move.
   const mimeType = await getMimeType(photo.drive_file_id);
   if (mimeType.startsWith("video/")) {
-    // Best-effort: name the video from its frames (needs ffmpeg; skip silently if unavailable).
+    let thumbnailPath: string | null = null;
+    let description: string | null = null;
+    let tags: string[] = ["videos"];
     try {
-      await describeAndRename(photo.drive_file_id, photo.drive_name ?? "");
+      const { path, frame } = await makeVideoThumbnail(photo.drive_file_id);
+      thumbnailPath = path;
+      const analysis = await analyzePhoto(frame);
+      if (analysis.description) description = analysis.description;
+      if (analysis.tags.length) tags = analysis.tags;
     } catch {
-      /* naming is optional — keep going and just move it */
+      /* no ffmpeg / unreadable video — keep going; it just won't be selectable yet */
     }
+
     let currentFolderId: string | null = null;
     const dest = folderMap["videos"];
     if (dest) {
@@ -64,7 +73,9 @@ export async function processOnePhoto(photoId: string): Promise<ProcessResult> {
         category: "videos",
         current_folder_id: currentFolderId,
         moved_at: currentFolderId ? new Date().toISOString() : null,
-        tags: ["videos"],
+        thumbnail_path: thumbnailPath,
+        description,
+        tags,
         status: "ready",
       })
       .eq("id", photoId);
@@ -76,7 +87,7 @@ export async function processOnePhoto(photoId: string): Promise<ProcessResult> {
   const thumb = await createThumbnail(original);
   const thumbnailPath = await storeThumbnail(photo.drive_file_id, thumb);
   const { hash, duplicateGroupId } = await hashAndGroup(thumb);
-  const category = await categorizePhoto(thumb);
+  const { category, description, tags } = await analyzePhoto(thumb);
 
   let currentFolderId: string | null = null;
   const dest = folderMap[category];
@@ -96,9 +107,10 @@ export async function processOnePhoto(photoId: string): Promise<ProcessResult> {
       perceptual_hash: hash,
       duplicate_group_id: duplicateGroupId,
       category,
+      description,
       current_folder_id: currentFolderId,
       moved_at: currentFolderId ? new Date().toISOString() : null,
-      tags: [category],
+      tags: tags.length ? tags : [category],
       status: "ready",
     })
     .eq("id", photoId);

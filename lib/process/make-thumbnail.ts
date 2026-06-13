@@ -27,6 +27,19 @@ export async function createThumbnail(original: Buffer): Promise<Buffer> {
     .toBuffer();
 }
 
+// Full-quality JPEG for publishing to Meta (handles HEIC, caps the long side at 2048px).
+export async function toPostJpeg(original: Buffer): Promise<Buffer> {
+  let input = original;
+  if (isHeic(original)) {
+    input = Buffer.from(await heicConvert({ buffer: original, format: "JPEG", quality: 0.95 }));
+  }
+  return sharp(input)
+    .rotate()
+    .resize(2048, 2048, { fit: "inside", withoutEnlargement: true })
+    .jpeg({ quality: 88 })
+    .toBuffer();
+}
+
 // Store ONLY the thumbnail in Supabase (never the original).
 export async function storeThumbnail(driveFileId: string, thumbnail: Buffer): Promise<string> {
   const path = `${driveFileId}.jpg`;

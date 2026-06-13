@@ -32,7 +32,9 @@ export async function updateSession(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const path = request.nextUrl.pathname;
-  const isAuthRoute = path.startsWith("/login") || path.startsWith("/auth");
+  // /api/cron/* runs with no logged-in user and guards itself with a secret.
+  const isAuthRoute =
+    path.startsWith("/login") || path.startsWith("/auth") || path.startsWith("/api/cron");
 
   if (!user && !isAuthRoute) {
     const url = request.nextUrl.clone();

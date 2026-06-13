@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import type { Photo } from "@/lib/types";
 import { FilterBar } from "@/components/filter-bar";
 import { PhotoTile } from "@/components/photo-tile";
@@ -72,8 +73,10 @@ export function BoardClient({
         <span>
           {filtered.length} photos{filter !== "all" ? ` in ${labelFor(filter)}` : ""}
         </span>
-        <div className="flex items-center gap-2">
-          {userEmail}
+        <div className="flex items-center gap-3">
+          <Link href="/compose" className="text-zinc-700 underline">New post</Link>
+          <Link href="/posts" className="text-zinc-700 underline">Scheduled</Link>
+          <span>{userEmail}</span>
           <form action="/auth/signout" method="post">
             <button className="underline">Sign out</button>
           </form>

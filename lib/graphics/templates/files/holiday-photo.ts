@@ -11,9 +11,9 @@ export const holidayPhoto: GraphicTemplate = {
     "enhances the celebration. Bold script over a dark scrim. Photo must be text-safe.",
   sizes: ["feed", "story"],
   slots: [
-    { key: "occasion", label: "Occasion (e.g. 'Happy Pride')", maxChars: 32, required: true },
-    { key: "message", label: "Message from the venue", maxChars: 150, required: false },
-    { key: "tagline", label: "Tagline", maxChars: 36, required: false },
+    { key: "occasion", label: "Occasion (e.g. 'Happy Pride')", maxChars: 9999, required: true },
+    { key: "message", label: "Message from the venue", maxChars: 9999, required: false },
+    { key: "tagline", label: "Tagline", maxChars: 9999, required: false },
   ],
   palettes: [
     {

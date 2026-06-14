@@ -12,9 +12,9 @@ export const holidaySolid: GraphicTemplate = {
     "Thanksgiving, or any seasonal occasion. Script accent adds festivity.",
   sizes: ["feed", "story"],
   slots: [
-    { key: "occasion", label: "Occasion (e.g. 'Happy Pride')", maxChars: 32, required: true },
-    { key: "message", label: "Message from the venue", maxChars: 150, required: false },
-    { key: "tagline", label: "Closing tagline", maxChars: 40, required: false },
+    { key: "occasion", label: "Occasion (e.g. 'Happy Pride')", maxChars: 9999, required: true },
+    { key: "message", label: "Message from the venue", maxChars: 9999, required: false },
+    { key: "tagline", label: "Closing tagline", maxChars: 9999, required: false },
   ],
   palettes: [
     {

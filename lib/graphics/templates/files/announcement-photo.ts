@@ -12,10 +12,10 @@ export const announcementPhoto: GraphicTemplate = {
     "be text-safe (clear focal point, good exposure). Text in lower third.",
   sizes: ["feed", "story"],
   slots: [
-    { key: "eyebrow", label: "Eyebrow", maxChars: 30, required: false },
-    { key: "headline", label: "Headline", maxChars: 45, required: true },
-    { key: "subhead", label: "Subhead", maxChars: 70, required: false },
-    { key: "tagline", label: "Tagline / CTA", maxChars: 40, required: false },
+    { key: "eyebrow", label: "Eyebrow", maxChars: 9999, required: false },
+    { key: "headline", label: "Headline", maxChars: 9999, required: true },
+    { key: "subhead", label: "Subhead", maxChars: 9999, required: false },
+    { key: "tagline", label: "Tagline / CTA", maxChars: 9999, required: false },
   ],
   palettes: [
     {

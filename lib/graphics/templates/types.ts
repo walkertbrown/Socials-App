@@ -6,7 +6,9 @@
 export interface TextSlot {
   key: string;
   label: string;
-  // Max character length the slot can hold before it overflows the design.
+  // Soft guide used in the AI prompt so it knows roughly how much copy fits
+  // at the default font size. No hard limit is enforced — the renderer scales
+  // the font down automatically so any length fits inside the canvas.
   maxChars: number;
   // Whether the slot is required or can be left blank.
   required: boolean;

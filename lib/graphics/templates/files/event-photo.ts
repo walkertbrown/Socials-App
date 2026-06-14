@@ -11,11 +11,11 @@ export const eventPhoto: GraphicTemplate = {
     "the stage. Date and name over a dark scrim in lower third.",
   sizes: ["feed", "story"],
   slots: [
-    { key: "eyebrow", label: "Event type label", maxChars: 28, required: false },
-    { key: "headline", label: "Event name", maxChars: 40, required: true },
-    { key: "date", label: "Date", maxChars: 30, required: true },
-    { key: "time", label: "Time", maxChars: 20, required: false },
-    { key: "cta", label: "Call to action", maxChars: 38, required: false },
+    { key: "eyebrow", label: "Event type label", maxChars: 9999, required: false },
+    { key: "headline", label: "Event name", maxChars: 9999, required: true },
+    { key: "date", label: "Date", maxChars: 9999, required: true },
+    { key: "time", label: "Time", maxChars: 9999, required: false },
+    { key: "cta", label: "Call to action", maxChars: 9999, required: false },
   ],
   palettes: [
     {

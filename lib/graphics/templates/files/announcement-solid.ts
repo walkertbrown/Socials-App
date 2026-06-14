@@ -11,10 +11,10 @@ export const announcementSolid: GraphicTemplate = {
     "Elegant and formal — no photo needed.",
   sizes: ["feed", "story"],
   slots: [
-    { key: "eyebrow", label: "Eyebrow (small label above headline)", maxChars: 30, required: false },
-    { key: "headline", label: "Headline", maxChars: 50, required: true },
-    { key: "subhead", label: "Subhead / supporting detail", maxChars: 80, required: false },
-    { key: "tagline", label: "Tagline / call-to-action", maxChars: 40, required: false },
+    { key: "eyebrow", label: "Eyebrow (small label above headline)", maxChars: 9999, required: false },
+    { key: "headline", label: "Headline", maxChars: 9999, required: true },
+    { key: "subhead", label: "Subhead / supporting detail", maxChars: 9999, required: false },
+    { key: "tagline", label: "Tagline / call-to-action", maxChars: 9999, required: false },
   ],
   palettes: [
     {

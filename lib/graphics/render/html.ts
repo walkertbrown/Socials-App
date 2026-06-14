@@ -52,7 +52,7 @@ export function buildGraphicHtml(options: HtmlOptions): string {
   const logoHtml = buildLogoChip(appBaseUrl, chipSize, logoSize, logoChipColor);
 
   // Build the main content block based on template id.
-  const contentHtml = buildContent(spec, template.id, font, isStory);
+  const contentHtml = buildContent(spec, template.id, font, isStory, w);
 
   // Background: photo with scrim for photo templates, solid/gradient for others.
   // For the flexible template, the AI-generated background comes from the spec's
@@ -369,11 +369,15 @@ function buildScrimHtml(templateId: string): string {
 
 // ── Per-template content layouts ─────────────────────────────────────────────────
 
+// buildContent produces the per-template HTML layout.
+// w is the canvas width (always 1080) — passed in so fitFont can derive base px
+// values that match the CSS class definitions above.
 function buildContent(
   spec: DesignSpec,
   templateId: string,
   font: { displayFamily: string; scriptFamily: string; sansFamily: string },
-  isStory: boolean
+  isStory: boolean,
+  w: number
 ): string {
   const s = spec.slots;
   const storyClass = isStory ? " story" : "";
@@ -386,15 +390,29 @@ function buildContent(
   const isPhoto = photoTemplates.includes(templateId);
   const wrapClass = isPhoto ? "photo" : "solid";
 
+  // Base px values that mirror the CSS class definitions. fitFont uses these as
+  // its ceiling and scales down proportionally when the text exceeds comfyLen.
+  const headlinePx   = isStory ? Math.round(w * 0.088) : Math.round(w * 0.078);
+  const gradHeadPx   = isStory ? Math.round(w * 0.088) : Math.round(w * 0.072);
+  const dishNamePx   = isStory ? Math.round(w * 0.088) : Math.round(w * 0.068);
+  const scriptPx     = Math.round(w * 0.13); // .script-accent.large
+  const subheadPx    = Math.round(w * 0.036);
+  const quoteTextPx  = Math.round(w * 0.046);
+  const dishDescPx   = Math.round(w * 0.032);
+  const taglinePx    = Math.round(w * 0.026);
+  const ctaPx        = Math.round(w * 0.026);
+  const hoursPx      = Math.round(w * 0.065);
+  const attributionPx = Math.round(w * 0.024);
+
   switch (templateId) {
     case "announcement-solid":
     case "announcement-photo":
       return `
         <div class="content-wrap ${wrapClass}">
           ${s.eyebrow ? `<p class="eyebrow">${esc(s.eyebrow)}</p>` : ""}
-          <h1 class="headline${storyClass}">${esc(s.headline ?? "")}</h1>
-          ${s.subhead ? `<div class="divider ${isPhoto ? "left" : ""}"></div><p class="subhead">${esc(s.subhead)}</p>` : ""}
-          ${s.tagline ? `<p class="tagline">${esc(s.tagline)}</p>` : ""}
+          <h1 class="headline${storyClass}" style="font-size:${fitFont(headlinePx, s.headline ?? "", 24)}px">${esc(s.headline ?? "")}</h1>
+          ${s.subhead ? `<div class="divider ${isPhoto ? "left" : ""}"></div><p class="subhead" style="font-size:${fitFont(subheadPx, s.subhead, 70)}px">${esc(s.subhead)}</p>` : ""}
+          ${s.tagline ? `<p class="tagline" style="font-size:${fitFont(taglinePx, s.tagline, 40)}px">${esc(s.tagline)}</p>` : ""}
         </div>`;
 
     case "event-solid":
@@ -402,40 +420,40 @@ function buildContent(
       return `
         <div class="content-wrap ${wrapClass}">
           ${s.eyebrow ? `<p class="event-type">${esc(s.eyebrow)}</p>` : ""}
-          <h1 class="headline${storyClass}">${esc(s.headline ?? "")}</h1>
+          <h1 class="headline${storyClass}" style="font-size:${fitFont(headlinePx, s.headline ?? "", 24)}px">${esc(s.headline ?? "")}</h1>
           <div class="divider ${isPhoto ? "left" : ""}"></div>
           ${s.date ? `<p class="date-time">${esc(s.date)}${s.time ? ` &nbsp;·&nbsp; ${esc(s.time)}` : ""}</p>` : ""}
-          ${s.detail ? `<p class="subhead">${esc(s.detail)}</p>` : ""}
-          ${s.cta ? `<p class="cta" style="margin-top:1.4em">${esc(s.cta)}</p>` : ""}
+          ${s.detail ? `<p class="subhead" style="font-size:${fitFont(subheadPx, s.detail, 70)}px">${esc(s.detail)}</p>` : ""}
+          ${s.cta ? `<p class="cta" style="margin-top:1.4em;font-size:${fitFont(ctaPx, s.cta, 40)}px">${esc(s.cta)}</p>` : ""}
         </div>`;
 
     case "holiday-solid":
     case "holiday-photo":
       return `
         <div class="content-wrap ${wrapClass}">
-          <span class="script-accent large">${esc(s.occasion ?? "")}</span>
+          <span class="script-accent large" style="font-size:${fitFont(scriptPx, s.occasion ?? "", 16)}px">${esc(s.occasion ?? "")}</span>
           <div class="divider"></div>
-          ${s.message ? `<p class="subhead">${esc(s.message)}</p>` : ""}
-          ${s.tagline ? `<p class="tagline">${esc(s.tagline)}</p>` : ""}
+          ${s.message ? `<p class="subhead" style="font-size:${fitFont(subheadPx, s.message, 70)}px">${esc(s.message)}</p>` : ""}
+          ${s.tagline ? `<p class="tagline" style="font-size:${fitFont(taglinePx, s.tagline, 40)}px">${esc(s.tagline)}</p>` : ""}
         </div>`;
 
     case "quote-feature":
       return `
         <div class="content-wrap solid">
           <span class="quote-mark">"</span>
-          <p class="quote-text">${esc(s.quote ?? "")}</p>
-          ${s.attribution ? `<p class="attribution">${esc(s.attribution)}</p>` : ""}
+          <p class="quote-text" style="font-size:${fitFont(quoteTextPx, s.quote ?? "", 90)}px">${esc(s.quote ?? "")}</p>
+          ${s.attribution ? `<p class="attribution" style="font-size:${fitFont(attributionPx, s.attribution, 40)}px">${esc(s.attribution)}</p>` : ""}
           <div class="divider"></div>
-          ${s.tagline ? `<p class="tagline">${esc(s.tagline)}</p>` : ""}
+          ${s.tagline ? `<p class="tagline" style="font-size:${fitFont(taglinePx, s.tagline, 40)}px">${esc(s.tagline)}</p>` : ""}
         </div>`;
 
     case "hours-card":
       return `
         <div class="content-wrap solid">
           <p class="status-label">${esc(s.status ?? "")}</p>
-          <p class="hours-display">${esc(s.hours ?? "")}</p>
-          ${s.note ? `<div class="divider"></div><p class="subhead">${esc(s.note)}</p>` : ""}
-          ${s.tagline ? `<p class="tagline" style="margin-top:1.2em">${esc(s.tagline)}</p>` : ""}
+          <p class="hours-display" style="font-size:${fitFont(hoursPx, s.hours ?? "", 20)}px">${esc(s.hours ?? "")}</p>
+          ${s.note ? `<div class="divider"></div><p class="subhead" style="font-size:${fitFont(subheadPx, s.note, 70)}px">${esc(s.note)}</p>` : ""}
+          ${s.tagline ? `<p class="tagline" style="margin-top:1.2em;font-size:${fitFont(taglinePx, s.tagline, 40)}px">${esc(s.tagline)}</p>` : ""}
         </div>`;
 
     case "menu-feature-solid":
@@ -443,29 +461,29 @@ function buildContent(
       return `
         <div class="content-wrap ${wrapClass}">
           ${s.category ? `<p class="category-label">${esc(s.category)}</p>` : ""}
-          <h1 class="dish-name${storyClass}">${esc(s.dish ?? "")}</h1>
-          ${s.description ? `<p class="dish-desc">${esc(s.description)}</p>` : ""}
+          <h1 class="dish-name${storyClass}" style="font-size:${fitFont(dishNamePx, s.dish ?? "", 24)}px">${esc(s.dish ?? "")}</h1>
+          ${s.description ? `<p class="dish-desc" style="font-size:${fitFont(dishDescPx, s.description, 70)}px">${esc(s.description)}</p>` : ""}
           ${s.price ? `<p class="price">${esc(s.price)}</p>` : ""}
-          ${s.cta ? `<div class="divider ${isPhoto ? "left" : ""}"></div><p class="cta">${esc(s.cta)}</p>` : ""}
+          ${s.cta ? `<div class="divider ${isPhoto ? "left" : ""}"></div><p class="cta" style="font-size:${fitFont(ctaPx, s.cta, 40)}px">${esc(s.cta)}</p>` : ""}
         </div>`;
 
     case "gradient-brand":
       return `
         <div class="content-wrap solid">
-          <h1 class="grad-headline${storyClass}">${esc(s.headline ?? "")}</h1>
-          ${s.subhead ? `<div class="divider"></div><p class="subhead">${esc(s.subhead)}</p>` : ""}
-          ${s.tagline ? `<p class="tagline" style="margin-top:1.4em">${esc(s.tagline)}</p>` : ""}
+          <h1 class="grad-headline${storyClass}" style="font-size:${fitFont(gradHeadPx, s.headline ?? "", 24)}px">${esc(s.headline ?? "")}</h1>
+          ${s.subhead ? `<div class="divider"></div><p class="subhead" style="font-size:${fitFont(subheadPx, s.subhead, 70)}px">${esc(s.subhead)}</p>` : ""}
+          ${s.tagline ? `<p class="tagline" style="margin-top:1.4em;font-size:${fitFont(taglinePx, s.tagline, 40)}px">${esc(s.tagline)}</p>` : ""}
         </div>`;
 
-    // Fix 3: flexible / generative template — centered layout with generous
-    // spacing; scrim ensures cream text is always readable.
+    // Flexible / generative template — centered layout with generous spacing;
+    // scrim ensures cream text is always readable over the AI-generated background.
     case "flexible":
       return `
         <div class="content-wrap solid" style="text-shadow: 0 1px 8px rgba(0,0,0,0.45);">
-          <span class="script-accent large">${esc(s.occasion ?? "")}</span>
+          <span class="script-accent large" style="font-size:${fitFont(scriptPx, s.occasion ?? "", 16)}px">${esc(s.occasion ?? "")}</span>
           <div class="divider"></div>
-          ${s.message ? `<p class="subhead" style="max-width:80%">${esc(s.message)}</p>` : ""}
-          ${s.tagline ? `<p class="tagline" style="margin-top:1.4em">${esc(s.tagline)}</p>` : ""}
+          ${s.message ? `<p class="subhead" style="max-width:80%;font-size:${fitFont(subheadPx, s.message, 70)}px">${esc(s.message)}</p>` : ""}
+          ${s.tagline ? `<p class="tagline" style="margin-top:1.4em;font-size:${fitFont(taglinePx, s.tagline, 40)}px">${esc(s.tagline)}</p>` : ""}
         </div>`;
 
     default:
@@ -480,4 +498,18 @@ function esc(text: string): string {
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
+}
+
+// Auto-shrink helper: returns a font-size in px that keeps long copy from
+// clipping. At or below comfyLen characters the base size is returned unchanged
+// so normal-length copy looks exactly as the designer intended. Beyond that the
+// size falls with sqrt(comfyLen/len) — a gentle curve — down to a floor of
+// basePx * minScale. Using sqrt instead of linear gives a graceful taper:
+// a 300-char message that would normally render at 38px scales to ~17px which
+// remains legible inside the 1080px canvas.
+function fitFont(basePx: number, text: string, comfyLen: number, minScale = 0.45): number {
+  const len = text.length;
+  if (len <= comfyLen) return basePx;
+  const scale = Math.max(minScale, Math.sqrt(comfyLen / len));
+  return Math.round(basePx * scale);
 }

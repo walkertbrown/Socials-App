@@ -29,9 +29,8 @@ export function TweakControls({
   onSizeToggle,
 }: TweakControlsProps) {
   function updateSlot(key: string, value: string) {
-    const slot = template.slots.find((s) => s.key === key);
-    const clamped = slot ? value.slice(0, slot.maxChars) : value;
-    onSpecChange({ ...spec, slots: { ...spec.slots, [key]: clamped } });
+    // No length clamping — the renderer auto-scales font size down for long copy.
+    onSpecChange({ ...spec, slots: { ...spec.slots, [key]: value } });
   }
 
   return (
@@ -62,22 +61,17 @@ export function TweakControls({
         <div className="flex flex-col gap-3">
           {template.slots.map((slot) => {
             const val = spec.slots[slot.key] ?? "";
-            const near = val.length > slot.maxChars * 0.85;
+            // Skip the AI-only background slot — it's not user-editable.
+            if (slot.key === "background") return null;
             return (
               <div key={slot.key}>
-                <label className="mb-1 flex items-center justify-between text-xs text-zinc-600">
-                  <span>
-                    {slot.label}
-                    {slot.required && <span className="ml-1 text-red-500">*</span>}
-                  </span>
-                  <span className={near ? "text-amber-600" : "text-zinc-400"}>
-                    {val.length}/{slot.maxChars}
-                  </span>
+                <label className="mb-1 block text-xs text-zinc-600">
+                  {slot.label}
+                  {slot.required && <span className="ml-1 text-red-500">*</span>}
                 </label>
                 <input
                   value={val}
                   onChange={(e) => updateSlot(slot.key, e.target.value)}
-                  maxLength={slot.maxChars}
                   placeholder={slot.required ? "(required)" : "(optional)"}
                   className="w-full rounded-md border border-zinc-300 p-2 text-sm"
                 />

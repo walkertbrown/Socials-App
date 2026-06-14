@@ -12,9 +12,9 @@ export const gradientBrand: GraphicTemplate = {
     "composition with generous whitespace. Very versatile.",
   sizes: ["feed", "story"],
   slots: [
-    { key: "headline", label: "Main message / headline", maxChars: 55, required: true },
-    { key: "subhead", label: "Supporting line", maxChars: 80, required: false },
-    { key: "tagline", label: "Tagline", maxChars: 36, required: false },
+    { key: "headline", label: "Main message / headline", maxChars: 9999, required: true },
+    { key: "subhead", label: "Supporting line", maxChars: 9999, required: false },
+    { key: "tagline", label: "Tagline", maxChars: 9999, required: false },
   ],
   palettes: [
     {

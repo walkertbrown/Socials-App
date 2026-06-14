@@ -13,7 +13,7 @@ export const holidaySolid: GraphicTemplate = {
   sizes: ["feed", "story"],
   slots: [
     { key: "occasion", label: "Occasion (e.g. 'Happy Pride')", maxChars: 32, required: true },
-    { key: "message", label: "Message from the venue", maxChars: 70, required: false },
+    { key: "message", label: "Message from the venue", maxChars: 150, required: false },
     { key: "tagline", label: "Closing tagline", maxChars: 40, required: false },
   ],
   palettes: [
@@ -53,6 +53,22 @@ export const holidaySolid: GraphicTemplate = {
         "--body": "#e0d5c4",
         "--accent": "#e6b94d",
         "--script": "#f9d0d5",
+        "--logo-chip": "#f3ecdd",
+      },
+    },
+    {
+      // Tasteful six-stop Pride gradient — slightly desaturated / softened for
+      // elegance rather than neon. Headline and script in cream so they read
+      // over the mid-spectrum bands. Logo chip stays cream for contrast.
+      id: "pride-rainbow",
+      label: "Pride Rainbow (six-color gradient)",
+      vars: {
+        "--bg": "linear-gradient(135deg, #c0392b 0%, #d4803a 18%, #c8b820 34%, #2e8b57 50%, #1a5fa8 68%, #7b4fa8 100%)",
+        "--bg2": "linear-gradient(135deg, #c0392b 0%, #d4803a 18%, #c8b820 34%, #2e8b57 50%, #1a5fa8 68%, #7b4fa8 100%)",
+        "--headline": "#f3ecdd",
+        "--body": "#f8f2e6",
+        "--accent": "#f3ecdd",
+        "--script": "#ffffff",
         "--logo-chip": "#f3ecdd",
       },
     },

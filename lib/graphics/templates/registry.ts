@@ -10,10 +10,13 @@ import { hoursCard } from "./files/hours-card";
 import { menuFeatureSolid } from "./files/menu-feature-solid";
 import { menuFeaturePhoto } from "./files/menu-feature-photo";
 import { gradientBrand } from "./files/gradient-brand";
+// Fix 3: generative-background fallback for open-ended/thematic prompts.
+import { flexibleTemplate } from "./files/flexible";
 
 // All available templates, in priority order for the AI prompt. When the AI is
 // choosing, it reads vibeDescription to pick the best match. Adding a new
 // template here is the ONLY change needed — the AI sees the full list automatically.
+// flexible is listed LAST so the AI only picks it when nothing else fits.
 export const TEMPLATE_REGISTRY: GraphicTemplate[] = [
   announcementSolid,
   announcementPhoto,
@@ -26,6 +29,7 @@ export const TEMPLATE_REGISTRY: GraphicTemplate[] = [
   menuFeatureSolid,
   menuFeaturePhoto,
   gradientBrand,
+  flexibleTemplate,
 ];
 
 // Quick lookup by id. Used by the render layer.

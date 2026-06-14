@@ -43,9 +43,10 @@ export function buildGraphicHtml(options: HtmlOptions): string {
     .join("\n    ");
 
   // Logo: cream/white circular chip behind the navy medallion so it reads on any bg.
-  // Chip is 10% of canvas width; logo sits inside with 8% padding. Top-center for
-  // solid templates; top-left for photo-background (avoids competing with subjects).
-  const chipSize = Math.round(w * 0.12);
+  // Chip is 22% of canvas width (prominent but not overbearing — roughly 237px on a
+  // 1080 canvas). Logo sits inside at 72% of chip size. Top-center for solid/flexible
+  // templates; top-left for photo-background (avoids competing with subjects).
+  const chipSize = Math.round(w * 0.22);
   const logoSize = Math.round(chipSize * 0.72);
   const logoChipColor = palette.vars["--logo-chip"] ?? "#f3ecdd";
   const logoHtml = buildLogoChip(appBaseUrl, chipSize, logoSize, logoChipColor);
@@ -54,7 +55,9 @@ export function buildGraphicHtml(options: HtmlOptions): string {
   const contentHtml = buildContent(spec, template.id, font, isStory);
 
   // Background: photo with scrim for photo templates, solid/gradient for others.
-  const bgCss = buildBackgroundCss(spec.templateId, photoUrl, palette);
+  // For the flexible template, the AI-generated background comes from the spec's
+  // "background" slot — validated before it reaches the renderer.
+  const bgCss = buildBackgroundCss(spec.templateId, photoUrl, palette, spec.slots);
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -127,6 +130,11 @@ export function buildGraphicHtml(options: HtmlOptions): string {
       align-items: center;
       justify-content: center;
       text-align: center;
+      /* Fix 1: offset center downward so text doesn't collide with the larger logo chip.
+         Chip bottom is ~26.5% from top (4.5% offset + 22% chip), so we push the
+         flex center down by ~12% of canvas height via padding-top vs padding-bottom. */
+      padding-top: ${Math.round(h * 0.24)}px;
+      padding-bottom: ${Math.round(h * 0.06)}px;
     }
     .content-wrap.photo {
       bottom: 0;
@@ -156,9 +164,15 @@ export function buildGraphicHtml(options: HtmlOptions): string {
       font-family: var(--display-font);
       font-size: ${Math.round(w * 0.036)}px;
       font-weight: 400;
-      line-height: 1.45;
+      line-height: 1.5;
       color: var(--body, #e0d5c4);
       margin-bottom: ${Math.round(h * 0.02)}px;
+      /* Fix 2: wrap long messages; never clip. max-width keeps lines readable. */
+      word-wrap: break-word;
+      overflow-wrap: break-word;
+      white-space: normal;
+      max-width: 90%;
+      overflow: visible;
     }
     .script-accent {
       font-family: var(--script-font);
@@ -307,7 +321,9 @@ function buildLogoChip(
 function buildBackgroundCss(
   templateId: string,
   photoUrl: string | null,
-  palette: { vars: Record<string, string> }
+  palette: { vars: Record<string, string> },
+  // Slots are passed in so the flexible template can read its AI-generated background.
+  slots?: Record<string, string>
 ): string {
   if (photoUrl) {
     // Photo background — scrim is handled by a separate overlay div.
@@ -319,21 +335,35 @@ function buildBackgroundCss(
     const b = palette.vars["--grad-b"] ?? "#0d1f30";
     return `background: linear-gradient(${angle}, ${a} 0%, ${b} 100%);`;
   }
+  // Fix 3: flexible template uses the AI-generated background from its slot.
+  // The value is pre-validated in design-spec.ts to only allow hex or linear-gradient.
+  if (templateId === "flexible" && slots?.background) {
+    return `background: ${slots.background}; background-size: cover;`;
+  }
   const bg = palette.vars["--bg"] ?? "#1c3149";
+  // If the palette's --bg is already a full CSS background value (gradient or
+  // complex expression), use it directly rather than wrapping it in another gradient.
+  // This supports the Pride rainbow palette and the flexible template's AI background.
+  if (bg.startsWith("linear-gradient(") || bg.startsWith("radial-gradient(")) {
+    return `background: ${bg};`;
+  }
   const bg2 = palette.vars["--bg2"] ?? bg;
   return `background: linear-gradient(160deg, ${bg} 0%, ${bg2} 100%);`;
 }
 
-// ── Photo scrim overlay ──────────────────────────────────────────────────────────
+// ── Photo / flexible scrim overlay ──────────────────────────────────────────────
 
 function buildScrimHtml(templateId: string): string {
-  const photoTemplates = [
+  const scrimTemplates = [
     "announcement-photo",
     "event-photo",
     "holiday-photo",
     "menu-feature-photo",
+    // Fix 3: flexible template always gets a scrim so cream text stays legible
+    // over any AI-generated background (the scrim vars live in the palette).
+    "flexible",
   ];
-  if (!photoTemplates.includes(templateId)) return "";
+  if (!scrimTemplates.includes(templateId)) return "";
   return `<div class="photo-scrim"></div>`;
 }
 
@@ -424,6 +454,17 @@ function buildContent(
         <div class="content-wrap solid">
           <h1 class="grad-headline${storyClass}">${esc(s.headline ?? "")}</h1>
           ${s.subhead ? `<div class="divider"></div><p class="subhead">${esc(s.subhead)}</p>` : ""}
+          ${s.tagline ? `<p class="tagline" style="margin-top:1.4em">${esc(s.tagline)}</p>` : ""}
+        </div>`;
+
+    // Fix 3: flexible / generative template — centered layout with generous
+    // spacing; scrim ensures cream text is always readable.
+    case "flexible":
+      return `
+        <div class="content-wrap solid" style="text-shadow: 0 1px 8px rgba(0,0,0,0.45);">
+          <span class="script-accent large">${esc(s.occasion ?? "")}</span>
+          <div class="divider"></div>
+          ${s.message ? `<p class="subhead" style="max-width:80%">${esc(s.message)}</p>` : ""}
           ${s.tagline ? `<p class="tagline" style="margin-top:1.4em">${esc(s.tagline)}</p>` : ""}
         </div>`;
 

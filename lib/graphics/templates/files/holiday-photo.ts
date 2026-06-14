@@ -12,7 +12,7 @@ export const holidayPhoto: GraphicTemplate = {
   sizes: ["feed", "story"],
   slots: [
     { key: "occasion", label: "Occasion (e.g. 'Happy Pride')", maxChars: 32, required: true },
-    { key: "message", label: "Short message", maxChars: 60, required: false },
+    { key: "message", label: "Message from the venue", maxChars: 150, required: false },
     { key: "tagline", label: "Tagline", maxChars: 36, required: false },
   ],
   palettes: [

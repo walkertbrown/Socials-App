@@ -36,6 +36,19 @@ RULES (non-negotiable):
 6. Set logoVariant to "dark-bg" if the background is dark/navy/photo; "light-bg" if cream/pale.
 7. Return ONLY valid JSON matching the DesignSpec shape below. No prose, no markdown, no code fences.
 
+FLEXIBLE TEMPLATE RULE (fix 3):
+If you choose the "flexible" template, you MUST fill the "background" slot with a CSS value
+that fits the topic. Allowed values are:
+  - A solid hex color: e.g. "#7b2d8b"
+  - A linear-gradient: e.g. "linear-gradient(135deg, #c0392b 0%, #7b4fa8 100%)"
+Do NOT use any other CSS value — no url(), no radial-gradient, no rgba alone, no keywords.
+Examples by topic:
+  - "happy pride" → "linear-gradient(135deg, #c0392b 0%, #d4803a 18%, #c8b820 34%, #2e8b57 50%, #1a5fa8 68%, #7b4fa8 100%)"
+  - "fall harvest" → "linear-gradient(135deg, #8b4513 0%, #c8691e 50%, #e6b84d 100%)"
+  - "ocean vibes" → "linear-gradient(135deg, #0d4f8b 0%, #1a8fa8 60%, #5bc8d4 100%)"
+  - "romantic evening" → "linear-gradient(135deg, #2d0d3d 0%, #6b1a4a 60%, #c0392b 100%)"
+Keep gradients elegant and slightly desaturated — avoid neon.
+
 DesignSpec shape:
 {
   "templateId": string,
@@ -81,6 +94,27 @@ Return the DesignSpec JSON.`;
   const parsed = JSON.parse(raw.slice(start, end + 1)) as Partial<DesignSpec>;
 
   return validateAndClamp(parsed, input.size, input.availablePhotoIds);
+}
+
+// Fix 3: constrain the AI-generated background for the flexible template.
+// Only a 6-digit hex color or a linear-gradient(...) is accepted.
+// Anything else (url(), keywords, radial-gradient, malformed) falls back to
+// a safe brand gradient so the template always renders cleanly.
+const BRAND_FALLBACK_BG =
+  "linear-gradient(135deg, #1c3149 0%, #0d1f30 100%)";
+const HEX_RE = /^#[0-9a-fA-F]{3}(?:[0-9a-fA-F]{3})?$/;
+const LINEAR_GRADIENT_RE = /^linear-gradient\([^)]{10,}\)$/;
+
+function sanitizeFlexibleBackground(value: string): string {
+  const v = value.trim();
+  if (!v) return BRAND_FALLBACK_BG;
+  // Accept: solid hex color
+  if (HEX_RE.test(v)) return v;
+  // Accept: linear-gradient(...) — basic structural check, not a full CSS parser.
+  // We check it starts with "linear-gradient(" and ends with ")".
+  if (LINEAR_GRADIENT_RE.test(v)) return v;
+  // Reject anything else (url, radial-gradient, keywords, empty, gibberish).
+  return BRAND_FALLBACK_BG;
 }
 
 // Validate every AI-chosen option against the template registry and clamp copy
@@ -137,6 +171,13 @@ function validateAndClamp(
     if (slot.required && !slots[slot.key]) {
       slots[slot.key] = "The Pelican Club";
     }
+  }
+
+  // Fix 3: validate the flexible template's AI-generated background slot.
+  // Only allow a solid hex color or a linear-gradient(...) — anything else
+  // is rejected and replaced with a safe brand fallback gradient.
+  if (templateId === "flexible") {
+    slots.background = sanitizeFlexibleBackground(slots.background ?? "");
   }
 
   return { templateId, size, slots, paletteId, fontId, logoVariant, photoId };

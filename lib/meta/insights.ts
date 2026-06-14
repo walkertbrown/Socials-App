@@ -1,16 +1,6 @@
 import "server-only";
 import { graph } from "@/lib/meta/client";
 
-// IG media fields — 'views' is the confirmed live field for video plays/reach
-// (not 'impressions' or 'plays' which Meta has deprecated or returns empty).
-// 'saved' and 'shares_count' are the live per-media-object field names.
-const IG_FIELDS = "reach,likes_count,comments_count,saved,shares_count,views";
-
-// FB post fields — post_impressions_unique is the per-post unique reach.
-// post_clicks covers link taps at the post level.
-const FB_FIELDS =
-  "post_impressions_unique,reactions.summary(true),comments.summary(true),shares,post_clicks";
-
 // Tolerate missing / deprecated metric keys — Meta silently drops fields they've
 // removed, and we don't want that to blow up the cron.
 function safeInt(val: unknown): number | null {
@@ -29,27 +19,55 @@ export interface IgMetrics {
 }
 
 // Fetch engagement metrics for an Instagram media object.
-// Never throws — returns nulls on any error so the cron keeps moving.
+// Uses TWO Graph API calls:
+//   (a) /{mediaId}/insights — for reach, saves, shares, views (media insights endpoint)
+//   (b) /{mediaId}?fields=like_count,comments_count — for likes and comments
+// The two calls are independent — if one fails we use whatever the other returned.
+// Never throws — returns nulls on total error so the cron keeps moving.
 export async function fetchInstagramInsights(
   mediaId: string,
   token: string
 ): Promise<IgMetrics> {
+  const nulls: IgMetrics = { reach: null, likes: null, comments: null, saves: null, shares: null, views: null };
+  let result: IgMetrics = { ...nulls };
+
+  // Call (a): media insights endpoint — reach, saved, shares, views.
+  // Response shape: { data: [{ name: string, values: [{ value: number }] }] }
   try {
-    const data = await graph(`${mediaId}`, {
+    const insightsData = await graph(`${mediaId}/insights`, {
       token,
-      params: { fields: IG_FIELDS },
+      params: { metric: "reach,saved,shares,views,total_interactions" },
     });
-    return {
-      reach: safeInt(data.reach),
-      likes: safeInt(data.likes_count),
-      comments: safeInt(data.comments_count),
-      saves: safeInt(data.saved),
-      shares: safeInt(data.shares_count),
-      views: safeInt(data.views),
-    };
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const byName: Record<string, any> = {};
+    if (Array.isArray(insightsData?.data)) {
+      for (const m of insightsData.data) byName[m.name] = m;
+    }
+    // Read the first value entry for each metric.
+    const readMetric = (name: string) => safeInt(byName[name]?.values?.[0]?.value);
+    result.reach = readMetric("reach");
+    result.saves = readMetric("saved");
+    result.shares = readMetric("shares");
+    result.views = readMetric("views");
+    // total_interactions has no IgMetrics field — requested but not stored.
   } catch {
-    return { reach: null, likes: null, comments: null, saves: null, shares: null, views: null };
+    // Call (a) failed — leave reach/saves/shares/views as null, still attempt (b).
   }
+
+  // Call (b): media object fields — like_count (singular), comments_count.
+  // Note: the field is 'like_count' (not 'likes_count') per the live API.
+  try {
+    const fieldData = await graph(`${mediaId}`, {
+      token,
+      params: { fields: "like_count,comments_count" },
+    });
+    result.likes = safeInt(fieldData.like_count);
+    result.comments = safeInt(fieldData.comments_count);
+  } catch {
+    // Call (b) failed — likes and comments remain null.
+  }
+
+  return result;
 }
 
 export interface FbMetrics {
@@ -61,28 +79,16 @@ export interface FbMetrics {
   views: number | null;
 }
 
-// Fetch engagement metrics for a Facebook post.
-// Never throws — returns nulls on any error.
+// FB per-post insights are blocked by the current token scope.
+// Reading reactions/comments returns "(#200) Missing Permissions" and
+// /insights returns empty data — so we don't issue the call at all.
+// Known limitation; expanding FB permissions is out of scope here.
+// Never throws — returns nulls so the cron keeps moving.
 export async function fetchFacebookInsights(
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   postId: string,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   token: string
 ): Promise<FbMetrics> {
-  try {
-    const data = await graph(`${postId}`, {
-      token,
-      params: { fields: FB_FIELDS },
-    });
-    return {
-      reach: safeInt(data.post_impressions_unique),
-      // reactions.summary.total_count is the standard likes-equivalent for FB.
-      likes: safeInt(data.reactions?.summary?.total_count),
-      comments: safeInt(data.comments?.summary?.total_count),
-      saves: null, // FB doesn't expose saves
-      shares: safeInt(data.shares?.count),
-      // FB Reels/video: use 'views' when available, fall back to post_clicks
-      views: safeInt(data.views),
-    };
-  } catch {
-    return { reach: null, likes: null, comments: null, saves: null, shares: null, views: null };
-  }
+  return { reach: null, likes: null, comments: null, saves: null, shares: null, views: null };
 }

@@ -2,13 +2,14 @@ import "server-only";
 import { graph } from "@/lib/meta/client";
 
 // IG account-level metrics fetched over a date window (since/until as Unix timestamps).
-// follows_and_unfollows with breakdown=follow_type gives the net growth breakdown.
+// metric_type=total_value collapses daily buckets into one total per metric.
 // profile_links_taps = link-in-bio taps.
-// online_followers is intentionally excluded — it returns empty per ground-truth probe.
+// follows_and_unfollows was removed — that metric requires breakdown=follow_type which
+// is permission-blocked; net_followers is now derived as a WoW delta in the cron.
+// online_followers is intentionally excluded — returns empty per ground-truth probe.
 const IG_ACCOUNT_METRICS = [
   "reach",
   "views",
-  "follows_and_unfollows",
   "profile_links_taps",
 ].join(",");
 
@@ -49,13 +50,19 @@ function sumMetricValues(metric: any): number | null {
 export interface IgAccountMetrics {
   reach: number | null;
   views: number | null;
-  // Net: follows minus unfollows in the window.
+  // net_followers is always null here — the cron derives it as a WoW delta
+  // by comparing the live followers_count to the prior week's snapshot.
   net_followers: number | null;
   link_taps: number | null;
+  // Live IG follower count fetched from the user object (not /insights).
+  followers_count: number | null;
 }
 
 // Fetch IG account-level metrics for a Mon–Sun window.
 // since/until are Unix epoch seconds.
+// Makes two independent calls:
+//   (a) /insights with metric_type=total_value — reach, views, profile_links_taps
+//   (b) /{igUserId}?fields=followers_count — live follower snapshot
 // Never throws — returns nulls on any error.
 export async function fetchIgAccountInsights(
   igUserId: string,
@@ -63,16 +70,20 @@ export async function fetchIgAccountInsights(
   since: number,
   until: number
 ): Promise<IgAccountMetrics> {
+  const nulls: IgAccountMetrics = { reach: null, views: null, net_followers: null, link_taps: null, followers_count: null };
+  let result: IgAccountMetrics = { ...nulls };
+
+  // Call (a): account insights — reach, views, link_taps.
+  // Response: { data: [{ name, total_value: { value } }] }
   try {
     const data = await graph(`${igUserId}/insights`, {
       token,
       params: {
         metric: IG_ACCOUNT_METRICS,
+        metric_type: "total_value",
         period: "day",
         since: String(since),
         until: String(until),
-        // follows_and_unfollows needs breakdown=follow_type to split follows/unfollows
-        breakdown: "follow_type",
       },
     });
 
@@ -83,35 +94,27 @@ export async function fetchIgAccountInsights(
       for (const m of data.data) byName[m.name] = m;
     }
 
-    // Net follower growth: follows minus unfollows.
-    // follows_and_unfollows breakdown gives us separate follow/unfollow counts.
-    let netFollowers: number | null = null;
-    const fauMetric = byName["follows_and_unfollows"];
-    if (fauMetric?.total_value?.breakdowns?.[0]?.results) {
-      let follows = 0;
-      let unfollows = 0;
-      for (const r of fauMetric.total_value.breakdowns[0].results) {
-        // dimension_values[0] will be 'FOLLOW' or 'UNFOLLOW'
-        const type = r.dimension_values?.[0]?.toUpperCase();
-        const val = safeInt(r.value) ?? 0;
-        if (type === "FOLLOW") follows += val;
-        else if (type === "UNFOLLOW") unfollows += val;
-      }
-      netFollowers = follows - unfollows;
-    } else if (fauMetric) {
-      // Fallback: sum all values if breakdown not available
-      netFollowers = sumMetricValues(fauMetric);
-    }
-
-    return {
-      reach: sumMetricValues(byName["reach"]),
-      views: sumMetricValues(byName["views"]),
-      net_followers: netFollowers,
-      link_taps: sumMetricValues(byName["profile_links_taps"]),
-    };
+    // sumMetricValues already handles total_value.value (preferred) and day-period fallback.
+    result.reach = sumMetricValues(byName["reach"]);
+    result.views = sumMetricValues(byName["views"]);
+    result.link_taps = sumMetricValues(byName["profile_links_taps"]);
+    // net_followers stays null — derived by the cron as a WoW delta.
   } catch {
-    return { reach: null, views: null, net_followers: null, link_taps: null };
+    // Call (a) failed — metrics stay null, still attempt follower count.
   }
+
+  // Call (b): live follower count from the user object.
+  try {
+    const userData = await graph(`${igUserId}`, {
+      token,
+      params: { fields: "followers_count" },
+    });
+    result.followers_count = safeInt(userData.followers_count);
+  } catch {
+    // Non-fatal — followers_count stays null.
+  }
+
+  return result;
 }
 
 export interface FbPageMetrics {

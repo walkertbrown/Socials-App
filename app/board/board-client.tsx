@@ -93,6 +93,7 @@ export function BoardClient({
         <div className="flex items-center gap-3">
           <Link href="/compose" className="text-zinc-700 underline">New post</Link>
           <Link href="/posts" className="text-zinc-700 underline">Scheduled</Link>
+          <Link href="/insights" className="text-zinc-700 underline">Insights</Link>
           <span>{userEmail}</span>
           <form action="/auth/signout" method="post">
             <button className="underline">Sign out</button>

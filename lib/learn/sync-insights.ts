@@ -64,6 +64,7 @@ export async function syncInsights(): Promise<void> {
         comments: null as number | null,
         saves: null as number | null,
         shares: null as number | null,
+        views: null as number | null,
       };
 
       if (post.ig_post_id) {

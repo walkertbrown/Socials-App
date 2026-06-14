@@ -34,6 +34,9 @@ export function PostsClient({ initialGroups }: { initialGroups: PostGroup[] }) {
           <Link href="/compose" className="rounded-md bg-zinc-900 px-3 py-1 text-white">
             New post
           </Link>
+          <Link href="/insights" className="text-zinc-500 underline">
+            Insights
+          </Link>
           <Link href="/board" className="text-zinc-500 underline">
             ← Board
           </Link>

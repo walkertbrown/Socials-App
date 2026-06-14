@@ -41,18 +41,24 @@ interface Props {
 // statuses, and action buttons. Each platform succeeds/fails independently.
 export function PostGroupCard({ group, onAct }: Props) {
   const isVideo = group.media_type === "video";
+  const isGraphic = group.media_type === "graphic";
 
   return (
     <div className="rounded-lg border border-zinc-200 p-3">
       <div className="flex gap-3">
-        {/* Thumbnail */}
-        {group.photo_id && (
+        {/* Thumbnail: photo/video use auth-gated thumb endpoint; graphics show a label chip */}
+        {group.photo_id && !isGraphic && (
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={`/api/thumb/${group.photo_id}`}
             alt=""
             className="h-16 w-16 shrink-0 rounded object-cover"
           />
+        )}
+        {isGraphic && (
+          <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded bg-[#1c3149] text-center text-xs font-medium text-[#f3ecdd]">
+            Graphic
+          </div>
         )}
 
         <div className="min-w-0 flex-1">
@@ -63,6 +69,9 @@ export function PostGroupCard({ group, onAct }: Props) {
 
           {isVideo && (
             <span className="mt-0.5 inline-block text-xs text-zinc-400">video / Reel</span>
+          )}
+          {isGraphic && (
+            <span className="mt-0.5 inline-block text-xs text-zinc-400">branded graphic</span>
           )}
 
           {/* Per-platform rows */}

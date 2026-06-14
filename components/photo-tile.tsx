@@ -8,11 +8,12 @@ interface Props {
   photo: Photo;
   onReclassify: (photo: Photo, category: string) => void;
   onUpdateTags: (photo: Photo, tags: string[]) => void;
+  onTextSafeChange?: (photo: Photo, textSafe: boolean) => void;
   extraCount?: number;
   onExpand?: () => void;
 }
 
-export function PhotoTile({ photo, onReclassify, onUpdateTags, extraCount, onExpand }: Props) {
+export function PhotoTile({ photo, onReclassify, onUpdateTags, onTextSafeChange, extraCount, onExpand }: Props) {
   const [editing, setEditing] = useState(false);
   const [newTag, setNewTag] = useState("");
   const tags = photo.tags ?? [];
@@ -112,6 +113,17 @@ export function PhotoTile({ photo, onReclassify, onUpdateTags, extraCount, onExp
               Add
             </button>
           </div>
+          {/* Text-safe toggle: marks this photo as safe for graphic text overlay. */}
+          {onTextSafeChange && (
+            <label className="mt-2 flex cursor-pointer items-center gap-1.5 text-xs text-zinc-600">
+              <input
+                type="checkbox"
+                checked={photo.text_safe ?? false}
+                onChange={(e) => onTextSafeChange(photo, e.target.checked)}
+              />
+              Safe for text overlay (graphic backgrounds)
+            </label>
+          )}
         </div>
       )}
     </div>

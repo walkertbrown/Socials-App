@@ -8,9 +8,11 @@ export interface ScheduledPost {
   // Per-platform shape (post 0006): one row per platform.
   platform: string;
   post_group_id: string | null;
-  media_type: "image" | "video";
+  // 'graphic' is a third media type for in-app generated graphics (photo_id is a
+  // graphics table id; the PNG is already in the 'graphics' bucket).
+  media_type: "image" | "video" | "graphic";
   scheduled_at: string;
-  // 'auto' = app publishes it (photos + Reels). 'reminder' = app pings her phone.
+  // 'auto' = app publishes it (photos + Reels + graphics). 'reminder' = app pings her phone.
   delivery: "auto" | "reminder";
   status:
     | "scheduled"
@@ -47,7 +49,7 @@ export async function createPost(input: {
   caption: string;
   platform: string;
   post_group_id?: string;
-  media_type?: "image" | "video";
+  media_type?: "image" | "video" | "graphic";
   scheduled_at: string;
   delivery?: "auto" | "reminder";
   // The raw AI draft before she edited it — diff source for the learning loop.
@@ -74,7 +76,7 @@ export async function createPostGroup(
     photo_id: string;
     caption: string;
     platform: string;
-    media_type: "image" | "video";
+    media_type: "image" | "video" | "graphic";
     scheduled_at: string;
     delivery: "auto" | "reminder";
     // The raw AI draft before she edited it — diff source for the learning loop.
@@ -108,9 +110,9 @@ export async function getPost(id: string): Promise<ScheduledPost | null> {
   return (data as ScheduledPost) ?? null;
 }
 
-// Atomically claim ONE due photo-auto post: flip scheduled -> publishing only if
-// still scheduled. If another cron tick already grabbed it, this returns null.
-// Only picks image/auto rows — video rows go through claimDueVideoPost.
+// Atomically claim ONE due photo/graphic-auto post: flip scheduled -> publishing
+// only if still scheduled. If another cron tick already grabbed it, returns null.
+// Picks image AND graphic auto rows — video rows go through claimDueVideoPost.
 export async function claimDuePost(): Promise<ScheduledPost | null> {
   const sb = createAdminClient();
   const { data: due } = await sb
@@ -118,7 +120,7 @@ export async function claimDuePost(): Promise<ScheduledPost | null> {
     .select("id")
     .eq("status", "scheduled")
     .eq("delivery", "auto")
-    .eq("media_type", "image")
+    .in("media_type", ["image", "graphic"])
     .lte("scheduled_at", new Date().toISOString())
     .order("scheduled_at", { ascending: true })
     .limit(1)

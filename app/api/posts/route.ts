@@ -35,8 +35,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "At least one platform item is required" }, { status: 400 });
   }
 
-  const resolvedMediaType: "image" | "video" =
-    media_type === "video" ? "video" : "image";
+  const resolvedMediaType: "image" | "video" | "graphic" =
+    media_type === "video" ? "video" : media_type === "graphic" ? "graphic" : "image";
 
   // Validate each item.
   for (const item of items) {

@@ -112,3 +112,23 @@ export async function setPicked(id: string, picked: boolean): Promise<void> {
     .update({ picked, picked_at: picked ? new Date().toISOString() : null })
     .eq("id", id);
 }
+
+// Mark/unmark a photo as safe for text overlay. The AI only picks text_safe photos
+// when generating graphics with a photo background (controlled safe-zone scrim).
+export async function setTextSafe(id: string, textSafe: boolean): Promise<void> {
+  const supabase = createAdminClient();
+  await supabase.from("photos").update({ text_safe: textSafe }).eq("id", id);
+}
+
+// All ready (non-video) photos marked as safe for text overlay. Passed to the
+// graphic design-spec AI so it only selects appropriate background photos.
+export async function getTextSafePhotos(): Promise<MatchablePhoto[]> {
+  const supabase = createAdminClient();
+  const { data } = await supabase
+    .from("photos")
+    .select("id, category, tags, description")
+    .eq("status", "ready")
+    .eq("text_safe", true)
+    .neq("category", "videos");
+  return (data ?? []) as MatchablePhoto[];
+}

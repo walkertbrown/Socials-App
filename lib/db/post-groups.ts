@@ -11,7 +11,7 @@ export interface PostGroup {
   // Convenience fields derived from the first row (caption + photo are shared).
   photo_id: string | null;
   caption: string;
-  media_type: "image" | "video";
+  media_type: "image" | "video" | "graphic";
   // Earliest scheduled_at among siblings (used for card-level sort).
   earliest_scheduled_at: string;
 }

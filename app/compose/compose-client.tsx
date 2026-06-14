@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import type { Photo } from "@/lib/types";
+import type { Photo, Graphic } from "@/lib/types";
 import { PhotoPicker } from "@/components/photo-picker";
 import { PlatformSchedule, type PlatformItem } from "@/components/platform-schedule";
 import { centralToUtcIso } from "@/lib/time";
@@ -20,9 +20,32 @@ function makeItems(when: string, delivery: "auto" | "reminder"): PlatformItem[] 
   }));
 }
 
-export function ComposeClient({ photos }: { photos: Photo[] }) {
+export function ComposeClient({
+  photos,
+  graphics = [],
+  preselectedGraphicId = null,
+}: {
+  photos: Photo[];
+  graphics?: Graphic[];
+  preselectedGraphicId?: string | null;
+}) {
   const router = useRouter();
+  // When a graphic is selected, we track its id here instead of a photo id.
+  const [selectedGraphicId, setSelectedGraphicId] = useState<string | null>(preselectedGraphicId);
   const [selected, setSelected] = useState<string | null>(null);
+
+  // If a graphicId was passed from /create, default to "graphic" media mode.
+  const [mediaMode, setMediaMode] = useState<"photo" | "graphic">(
+    preselectedGraphicId ? "graphic" : "photo"
+  );
+
+  // Sync if the preselected graphic changes (e.g. navigation).
+  useEffect(() => {
+    if (preselectedGraphicId) {
+      setSelectedGraphicId(preselectedGraphicId);
+      setMediaMode("graphic");
+    }
+  }, [preselectedGraphicId]);
   const [intent, setIntent] = useState("");
   const [matchedIds, setMatchedIds] = useState<string[] | null>(null);
   const [searching, setSearching] = useState(false);
@@ -40,6 +63,7 @@ export function ComposeClient({ photos }: { photos: Photo[] }) {
 
   const selectedPhoto = photos.find((p) => p.id === selected);
   const isVideo = selectedPhoto?.category === "videos";
+  const selectedGraphic = graphics.find((g) => g.id === selectedGraphicId);
 
   // When a video is selected, default delivery to auto (Reel); user can override.
   // We don't auto-flip if they've already chosen — only on fresh selection.
@@ -144,17 +168,22 @@ export function ComposeClient({ photos }: { photos: Photo[] }) {
   }
 
   async function schedule() {
-    if (!selected) return setMsg("Pick a photo or video first.");
+    // For graphic mode, require a graphic selection.
+    if (mediaMode === "graphic" && !selectedGraphicId) {
+      return setMsg("Pick a saved graphic first.");
+    }
+    if (mediaMode === "photo" && !selected) return setMsg("Pick a photo or video first.");
     if (!items.length) return setMsg("Pick at least one platform.");
     if (items.some((i) => !i.scheduled_at)) return setMsg("Set a time for each platform.");
     setSaving(true);
     setMsg(null);
     try {
       const postGroupId = crypto.randomUUID();
-      const mediaType = isVideo ? "video" : "image";
+      const mediaType = mediaMode === "graphic" ? "graphic" : isVideo ? "video" : "image";
+      const mediaId = mediaMode === "graphic" ? selectedGraphicId! : selected!;
       // Build one item per platform.
       const payload = {
-        photo_id: selected,
+        photo_id: mediaId,
         caption,
         // Send the original AI draft so it can be persisted alongside the final
         // caption — the diff is the learning signal for future drafts.
@@ -187,56 +216,128 @@ export function ComposeClient({ photos }: { photos: Photo[] }) {
     <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-5 p-4">
       <div className="flex items-center justify-between">
         <h1 className="text-lg font-semibold">New post</h1>
-        <Link href="/board" className="text-sm text-zinc-500 underline">
-          ← Board
-        </Link>
+        <div className="flex items-center gap-3 text-sm">
+          <Link href="/create" className="text-zinc-500 underline">Create graphic</Link>
+          <Link href="/board" className="text-zinc-500 underline">← Board</Link>
+        </div>
       </div>
 
-      {/* 1. Intent search */}
+      {/* Media mode: photo/video vs saved graphic */}
       <section>
-        <p className="mb-2 text-sm font-medium text-zinc-700">1. What do you want to post about?</p>
+        <p className="mb-2 text-sm font-medium text-zinc-700">1. What are you posting?</p>
         <div className="flex gap-2">
-          <input
-            value={intent}
-            onChange={(e) => setIntent(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && findPhotos()}
-            placeholder="e.g. a post about the staff, this weekend, the BBQ shrimp…"
-            className="w-full rounded-md border border-zinc-300 p-2 text-sm"
-          />
-          <button
-            onClick={() => findPhotos()}
-            disabled={searching}
-            className="shrink-0 rounded-md bg-zinc-900 px-3 py-1 text-sm text-white disabled:opacity-40"
-          >
-            {searching ? "Finding…" : "Find photos"}
-          </button>
-        </div>
-        <div className="mt-2 flex flex-wrap gap-1.5">
-          {QUICK_TAGS.map((t) => (
+          {(["photo", "graphic"] as const).map((m) => (
             <button
-              key={t}
-              onClick={() => findPhotos(t)}
-              className="rounded-full bg-zinc-100 px-3 py-1 text-xs capitalize text-zinc-700 hover:bg-zinc-200"
+              key={m}
+              onClick={() => setMediaMode(m)}
+              className={`rounded-full px-4 py-1.5 text-sm ${
+                mediaMode === m ? "bg-zinc-900 text-white" : "bg-zinc-100 text-zinc-600"
+              }`}
             >
-              {t}
+              {m === "photo" ? "Photo or Video" : "Saved Graphic"}
             </button>
           ))}
         </div>
-        <p className="mt-2 text-xs text-zinc-400">Optional — leave blank to browse everything.</p>
       </section>
 
-      {/* 2. Photo / video picker */}
-      <section>
-        <div className="mb-2 flex items-center justify-between">
-          <p className="text-sm font-medium text-zinc-700">2. Pick a photo or video</p>
-          {matchedIds !== null && (
-            <button onClick={clearSearch} className="text-xs text-zinc-500 underline">
-              Showing matches{intent.trim() ? ` for "${intent.trim()}"` : ""} · clear
-            </button>
+      {/* Graphic picker */}
+      {mediaMode === "graphic" && (
+        <section>
+          <p className="mb-2 text-sm font-medium text-zinc-700">2. Pick a saved graphic</p>
+          {graphics.length === 0 ? (
+            <p className="text-sm text-zinc-500">
+              No saved graphics yet.{" "}
+              <Link href="/create" className="underline">Create one →</Link>
+            </p>
+          ) : (
+            <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+              {graphics.map((g) => {
+                const sb = g.png_path
+                  ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/graphics/${g.png_path}`
+                  : null;
+                return (
+                  <button
+                    key={g.id}
+                    onClick={() => setSelectedGraphicId(g.id)}
+                    className={`relative aspect-square overflow-hidden rounded-md border-2 ${
+                      selectedGraphicId === g.id ? "border-blue-600" : "border-transparent"
+                    }`}
+                  >
+                    {sb ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={sb} alt="Graphic" className="h-full w-full object-cover" />
+                    ) : (
+                      <div className="flex h-full items-center justify-center bg-zinc-100 text-xs text-zinc-500">
+                        Graphic
+                      </div>
+                    )}
+                    <span className="absolute bottom-1 left-1 rounded bg-black/60 px-1 text-[10px] text-white">
+                      {g.size}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
           )}
-        </div>
-        <PhotoPicker photos={photos} selectedId={selected} onSelect={handleSelect} matchedIds={matchedIds} />
-      </section>
+          {selectedGraphic && (
+            <p className="mt-1 text-xs text-zinc-500">
+              Selected: {selectedGraphic.size} graphic from{" "}
+              {new Date(selectedGraphic.created_at).toLocaleDateString()}
+            </p>
+          )}
+        </section>
+      )}
+
+      {/* Photo/video sections — only shown in photo mode */}
+      {mediaMode === "photo" && (
+        <>
+          {/* Intent search */}
+          <section>
+            <p className="mb-2 text-sm font-medium text-zinc-700">2. What do you want to post about?</p>
+            <div className="flex gap-2">
+              <input
+                value={intent}
+                onChange={(e) => setIntent(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && findPhotos()}
+                placeholder="e.g. a post about the staff, this weekend, the BBQ shrimp…"
+                className="w-full rounded-md border border-zinc-300 p-2 text-sm"
+              />
+              <button
+                onClick={() => findPhotos()}
+                disabled={searching}
+                className="shrink-0 rounded-md bg-zinc-900 px-3 py-1 text-sm text-white disabled:opacity-40"
+              >
+                {searching ? "Finding…" : "Find photos"}
+              </button>
+            </div>
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {QUICK_TAGS.map((t) => (
+                <button
+                  key={t}
+                  onClick={() => findPhotos(t)}
+                  className="rounded-full bg-zinc-100 px-3 py-1 text-xs capitalize text-zinc-700 hover:bg-zinc-200"
+                >
+                  {t}
+                </button>
+              ))}
+            </div>
+            <p className="mt-2 text-xs text-zinc-400">Optional — leave blank to browse everything.</p>
+          </section>
+
+          {/* Photo / video picker */}
+          <section>
+            <div className="mb-2 flex items-center justify-between">
+              <p className="text-sm font-medium text-zinc-700">3. Pick a photo or video</p>
+              {matchedIds !== null && (
+                <button onClick={clearSearch} className="text-xs text-zinc-500 underline">
+                  Showing matches{intent.trim() ? ` for "${intent.trim()}"` : ""} · clear
+                </button>
+              )}
+            </div>
+            <PhotoPicker photos={photos} selectedId={selected} onSelect={handleSelect} matchedIds={matchedIds} />
+          </section>
+        </>
+      )}
 
       {/* Video preview */}
       {isVideo && selected && (
@@ -255,13 +356,16 @@ export function ComposeClient({ photos }: { photos: Photo[] }) {
         </section>
       )}
 
-      {/* 3. Caption */}
+      {/* Caption — section number is dynamic based on media mode */}
       <section>
         <div className="mb-2 flex items-center justify-between">
-          <p className="text-sm font-medium text-zinc-700">3. Caption</p>
+          <p className="text-sm font-medium text-zinc-700">
+            {mediaMode === "graphic" ? "2" : "4"}. Caption
+          </p>
+          {/* Draft with AI only available for photo posts (needs photo context) */}
           <button
             onClick={draft}
-            disabled={!selected || drafting}
+            disabled={mediaMode !== "photo" || !selected || drafting}
             className="rounded-md bg-zinc-900 px-3 py-1 text-sm text-white disabled:opacity-40"
           >
             {drafting ? "Writing…" : "Draft with AI"}

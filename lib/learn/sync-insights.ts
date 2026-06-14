@@ -18,13 +18,17 @@ const FINAL_AFTER_MS = 30 * 24 * 60 * 60 * 1000;
 //   3. Hard .limit(5) on the query — never unbounded.
 //
 // Each failure per-post is caught so one bad API call can't abort the rest.
-export async function syncInsights(): Promise<void> {
+//
+// Returns the number of posts processed. The weekly cron uses this to run up to
+// 4 bounded passes (up to ~20 posts total) and break early when nothing is left.
+// publish-due ignores the return value — this is fully backward-compatible.
+export async function syncInsights(): Promise<number> {
   // Gate 1: Meta credentials must be present.  If not connected, no-op.
   let creds: Awaited<ReturnType<typeof requireCredentials>>;
   try {
     creds = await requireCredentials();
   } catch {
-    return; // Meta not connected yet — silently skip
+    return 0; // Meta not connected yet — silently skip
   }
 
   const sb = createAdminClient();
@@ -40,7 +44,7 @@ export async function syncInsights(): Promise<void> {
     .order("published_at", { ascending: false })
     .limit(5); // hard cap — non-negotiable
 
-  if (error || !posts?.length) return;
+  if (error || !posts?.length) return 0;
 
   // requireCredentials() has already thrown if page_token is null.
   const token = creds.page_token as string;
@@ -92,6 +96,10 @@ export async function syncInsights(): Promise<void> {
   // After updating metrics, refresh perf_score in hashtag_vocab.
   // A tag earns a higher score when posts that use it have higher reach.
   await refreshHashtagPerfScores(sb);
+
+  // Return the number of posts processed so the weekly cron can decide
+  // whether to run another pass (early break when n < 5 means nothing left).
+  return posts.length;
 }
 
 // Update perf_score for each tag in hashtag_vocab using average reach of posts

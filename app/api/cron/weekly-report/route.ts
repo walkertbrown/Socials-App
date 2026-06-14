@@ -4,12 +4,13 @@ import { fetchIgAccountInsights, fetchFbPageInsights } from "@/lib/meta/account-
 import { fetchIgDemographics } from "@/lib/meta/demographics";
 import { runNativeSweep } from "@/lib/meta/native-sweep";
 import { checkTokenHealth } from "@/lib/meta/token-health";
-import { upsertAccountSnapshot } from "@/lib/db/weekly-snapshots";
+import { upsertAccountSnapshot, getRecentSnapshots } from "@/lib/db/weekly-snapshots";
 import { insertReportShell, saveReportPayload, saveNarratives, getReportByWeek } from "@/lib/db/weekly-reports";
 import { computeWeek, getPreviousMondayChicago, getWeekWindow, toDateString } from "@/lib/report/compute-week";
 import { generateWinNarrative, generateRecommendNarrative } from "@/lib/report/narratives";
 import { computeFlag } from "@/lib/report/flag";
 import { sendPushToAll } from "@/lib/notify/web-push";
+import { syncInsights } from "@/lib/learn/sync-insights";
 
 // Node runtime required for Claude SDK + @react-pdf (both need Node APIs).
 export const runtime = "nodejs";
@@ -96,16 +97,32 @@ export async function GET(request: NextRequest) {
     fetchIgDemographics(igUserId, token),
   ]);
 
+  // Derive IG net_followers as a WoW delta: current followers_count minus the
+  // most recent prior week's followers_count (getRecentSnapshots returns newest first,
+  // so index [0] is this week's prior run if any — we skip the current week_start
+  // and take the first row with a different week_start as the prior snapshot).
+  let netFollowers: number | null = null;
+  try {
+    const priorSnapshots = await getRecentSnapshots("instagram", 8);
+    const priorSnap = priorSnapshots.find((s) => s.week_start !== weekStartStr);
+    const priorFollowersCount = priorSnap?.followers_count ?? null;
+    if (igAccount.followers_count != null && priorFollowersCount != null) {
+      netFollowers = igAccount.followers_count - priorFollowersCount;
+    }
+  } catch {
+    // Non-fatal — net_followers stays null (first run or DB error).
+  }
+
   await Promise.all([
     upsertAccountSnapshot({
       platform: "instagram",
       week_start: weekStartStr,
       reach: igAccount.reach,
       views: igAccount.views,
-      net_followers: igAccount.net_followers,
-      engagement: null,       // IG account-level engagement not in ground-truth
+      net_followers: netFollowers,       // WoW delta derived above
+      engagement: null,                  // IG account-level engagement not in ground-truth
       link_taps: igAccount.link_taps,
-      followers_count: null,  // IG total follower count not in account insights endpoint
+      followers_count: igAccount.followers_count,  // live count from user object
       demographics: igDemographics,
     }),
     upsertAccountSnapshot({
@@ -123,6 +140,20 @@ export async function GET(request: NextRequest) {
 
   // ── 6. Native sweep — record any posts Meta knows about but we don't ──────
   await runNativeSweep({ igUserId, pageId, token, since, until });
+
+  // ── 6b. Bounded insights sync — up to 4 passes × 5 posts = ~20 posts ─────
+  // syncInsights sets insights_fetched_at on each post it processes, so
+  // repeated calls naturally pick the next eligible batch. Break early when
+  // fewer than 5 posts were returned (nothing left in the queue).
+  // Non-fatal: a sync failure must never prevent the report from completing.
+  try {
+    for (let i = 0; i < 4; i++) {
+      const n = await syncInsights();
+      if (n < 5) break;
+    }
+  } catch {
+    // Sync failure is non-fatal — report generation continues.
+  }
 
   // ── 7. Compute the structured week payload ────────────────────────────────
   const payload = await computeWeek(weekStart);

@@ -12,10 +12,10 @@ export const hoursCard: GraphicTemplate = {
     "Solid background; no photo needed. Clear, readable, practical.",
   sizes: ["feed", "story"],
   slots: [
-    { key: "status", label: "Status label (e.g. 'Open Today' / 'Holiday Hours')", maxChars: 28, required: true },
-    { key: "hours", label: "Hours (e.g. '5 PM – 10 PM')", maxChars: 30, required: true },
-    { key: "note", label: "Note / caveat (e.g. 'Reservations recommended')", maxChars: 70, required: false },
-    { key: "tagline", label: "Closing tagline", maxChars: 36, required: false },
+    { key: "status", label: "Status label (e.g. 'Open Today' / 'Holiday Hours')", maxChars: 9999, required: true },
+    { key: "hours", label: "Hours (e.g. '5 PM – 10 PM')", maxChars: 9999, required: true },
+    { key: "note", label: "Note / caveat (e.g. 'Reservations recommended')", maxChars: 9999, required: false },
+    { key: "tagline", label: "Closing tagline", maxChars: 9999, required: false },
   ],
   palettes: [
     {

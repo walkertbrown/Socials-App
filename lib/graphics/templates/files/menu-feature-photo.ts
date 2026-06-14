@@ -12,10 +12,10 @@ export const menuFeaturePhoto: GraphicTemplate = {
     "overlay the photo in the lower third over a dark scrim. Photo must be text-safe.",
   sizes: ["feed", "story"],
   slots: [
-    { key: "category", label: "Category label (e.g. 'Tonight on the Menu')", maxChars: 32, required: false },
-    { key: "dish", label: "Dish / drink name", maxChars: 36, required: true },
-    { key: "description", label: "Description (keep brief over photo)", maxChars: 65, required: false },
-    { key: "cta", label: "CTA", maxChars: 36, required: false },
+    { key: "category", label: "Category label (e.g. 'Tonight on the Menu')", maxChars: 9999, required: false },
+    { key: "dish", label: "Dish / drink name", maxChars: 9999, required: true },
+    { key: "description", label: "Description", maxChars: 9999, required: false },
+    { key: "cta", label: "CTA", maxChars: 9999, required: false },
   ],
   palettes: [
     {

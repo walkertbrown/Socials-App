@@ -20,13 +20,13 @@ export const flexibleTemplate: GraphicTemplate = {
   sizes: ["feed", "story"],
   slots: [
     // Occasion is the large script-style top line (e.g. "Happy Pride")
-    { key: "occasion", label: "Occasion / theme", maxChars: 40, required: true },
-    // Message is the supporting copy — 150 chars now that subhead wraps.
-    { key: "message", label: "Message from the venue", maxChars: 150, required: false },
-    { key: "tagline", label: "Closing tagline / venue name", maxChars: 44, required: false },
+    { key: "occasion", label: "Occasion / theme", maxChars: 9999, required: true },
+    // Message is the supporting copy — font scales down for any length.
+    { key: "message", label: "Message from the venue", maxChars: 9999, required: false },
+    { key: "tagline", label: "Closing tagline / venue name", maxChars: 9999, required: false },
     // background is injected by the AI — validated to hex or linear-gradient only.
     // It is NOT shown in the tweak UI (the renderer reads it directly from slots).
-    { key: "background", label: "Background (CSS gradient or hex — AI only)", maxChars: 300, required: false },
+    { key: "background", label: "Background (CSS gradient or hex — AI only)", maxChars: 9999, required: false },
   ],
   palettes: [
     {

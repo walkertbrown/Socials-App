@@ -11,12 +11,12 @@ export const eventSolid: GraphicTemplate = {
     "No photo needed — clean and formal.",
   sizes: ["feed", "story"],
   slots: [
-    { key: "eyebrow", label: "Event type label (e.g. 'Live Jazz')", maxChars: 28, required: false },
-    { key: "headline", label: "Event name / headline", maxChars: 45, required: true },
-    { key: "date", label: "Date (e.g. 'Friday, June 20')", maxChars: 30, required: true },
-    { key: "time", label: "Time (e.g. '7 PM')", maxChars: 20, required: false },
-    { key: "detail", label: "Supporting detail / description", maxChars: 80, required: false },
-    { key: "cta", label: "Call to action (e.g. 'Reserve your table')", maxChars: 38, required: false },
+    { key: "eyebrow", label: "Event type label (e.g. 'Live Jazz')", maxChars: 9999, required: false },
+    { key: "headline", label: "Event name / headline", maxChars: 9999, required: true },
+    { key: "date", label: "Date (e.g. 'Friday, June 20')", maxChars: 9999, required: true },
+    { key: "time", label: "Time (e.g. '7 PM')", maxChars: 9999, required: false },
+    { key: "detail", label: "Supporting detail / description", maxChars: 9999, required: false },
+    { key: "cta", label: "Call to action (e.g. 'Reserve your table')", maxChars: 9999, required: false },
   ],
   palettes: [
     {

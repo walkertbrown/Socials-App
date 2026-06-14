@@ -11,11 +11,11 @@ export const menuFeatureSolid: GraphicTemplate = {
     "evocative copy and brand typography carry the appetite appeal.",
   sizes: ["feed", "story"],
   slots: [
-    { key: "category", label: "Category label (e.g. 'Cocktail of the Month')", maxChars: 32, required: false },
-    { key: "dish", label: "Dish / drink name", maxChars: 40, required: true },
-    { key: "description", label: "Evocative description", maxChars: 90, required: false },
-    { key: "price", label: "Price (optional)", maxChars: 12, required: false },
-    { key: "cta", label: "Call to action", maxChars: 36, required: false },
+    { key: "category", label: "Category label (e.g. 'Cocktail of the Month')", maxChars: 9999, required: false },
+    { key: "dish", label: "Dish / drink name", maxChars: 9999, required: true },
+    { key: "description", label: "Evocative description", maxChars: 9999, required: false },
+    { key: "price", label: "Price (optional)", maxChars: 9999, required: false },
+    { key: "cta", label: "Call to action", maxChars: 9999, required: false },
   ],
   palettes: [
     {

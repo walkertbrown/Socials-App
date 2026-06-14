@@ -12,9 +12,9 @@ export const quoteFeature: GraphicTemplate = {
     "or a brand promise. No photo — let the words do the work.",
   sizes: ["feed", "story"],
   slots: [
-    { key: "quote", label: "The quote or statement (max 120 chars)", maxChars: 120, required: true },
-    { key: "attribution", label: "Attribution (e.g. '— A Happy Guest')", maxChars: 40, required: false },
-    { key: "tagline", label: "Footer tagline", maxChars: 36, required: false },
+    { key: "quote", label: "The quote or statement", maxChars: 9999, required: true },
+    { key: "attribution", label: "Attribution (e.g. '— A Happy Guest')", maxChars: 9999, required: false },
+    { key: "tagline", label: "Footer tagline", maxChars: 9999, required: false },
   ],
   palettes: [
     {

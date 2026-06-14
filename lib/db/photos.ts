@@ -42,6 +42,39 @@ export async function getReadyPhotos(): Promise<Photo[]> {
   return (data ?? []) as Photo[];
 }
 
+// Videos ready to post (the photo reads deliberately exclude these). Used by the
+// compose picker so she can pick a video for a reminder post.
+export async function getReadyVideos(): Promise<Photo[]> {
+  const supabase = createAdminClient();
+  const { data } = await supabase
+    .from("photos")
+    .select("*")
+    .eq("status", "ready")
+    .eq("category", "videos")
+    .not("thumbnail_path", "is", null) // only ones with a usable preview frame
+    .order("created_at", { ascending: false });
+  return (data ?? []) as Photo[];
+}
+
+// Lightweight read for intent matching: just what we score on, for every
+// ready (non-video) photo. ~80 rows — small enough to score in memory.
+export interface MatchablePhoto {
+  id: string;
+  category: string | null;
+  tags: string[] | null;
+  description: string | null;
+}
+export async function getPhotosForMatching(): Promise<MatchablePhoto[]> {
+  const supabase = createAdminClient();
+  // Includes videos (they carry descriptions/tags too) so intent search can
+  // surface a matching video alongside photos.
+  const { data } = await supabase
+    .from("photos")
+    .select("id, category, tags, description")
+    .eq("status", "ready");
+  return (data ?? []) as MatchablePhoto[];
+}
+
 export async function getThumbnailPath(id: string): Promise<string | null> {
   const supabase = createAdminClient();
   const { data } = await supabase
@@ -52,10 +85,50 @@ export async function getThumbnailPath(id: string): Promise<string | null> {
   return data?.thumbnail_path ?? null;
 }
 
+// Overwrite a photo's tags (her manual edits on the board — e.g. adding a staff
+// member's name so "a post about CJ" finds it). Sanitizes: trims, drops blanks,
+// de-dupes case-insensitively, caps length and count.
+export async function setTags(id: string, tags: string[]): Promise<string[]> {
+  const supabase = createAdminClient();
+  const seen = new Set<string>();
+  const clean: string[] = [];
+  for (const raw of tags) {
+    const t = String(raw).trim().slice(0, 40);
+    const key = t.toLowerCase();
+    if (t && !seen.has(key)) {
+      seen.add(key);
+      clean.push(t);
+    }
+    if (clean.length >= 20) break;
+  }
+  await supabase.from("photos").update({ tags: clean }).eq("id", id);
+  return clean;
+}
+
 export async function setPicked(id: string, picked: boolean): Promise<void> {
   const supabase = createAdminClient();
   await supabase
     .from("photos")
     .update({ picked, picked_at: picked ? new Date().toISOString() : null })
     .eq("id", id);
+}
+
+// Mark/unmark a photo as safe for text overlay. The AI only picks text_safe photos
+// when generating graphics with a photo background (controlled safe-zone scrim).
+export async function setTextSafe(id: string, textSafe: boolean): Promise<void> {
+  const supabase = createAdminClient();
+  await supabase.from("photos").update({ text_safe: textSafe }).eq("id", id);
+}
+
+// All ready (non-video) photos marked as safe for text overlay. Passed to the
+// graphic design-spec AI so it only selects appropriate background photos.
+export async function getTextSafePhotos(): Promise<MatchablePhoto[]> {
+  const supabase = createAdminClient();
+  const { data } = await supabase
+    .from("photos")
+    .select("id, category, tags, description")
+    .eq("status", "ready")
+    .eq("text_safe", true)
+    .neq("category", "videos");
+  return (data ?? []) as MatchablePhoto[];
 }

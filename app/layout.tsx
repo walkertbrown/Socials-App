@@ -8,6 +8,11 @@ const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"]
 export const metadata: Metadata = {
   title: "Photo Triage",
   description: "Pick the keepers and queue them up.",
+  manifest: "/manifest.json",
+};
+
+export const viewport = {
+  themeColor: "#0f3d3e",
 };
 
 export default function RootLayout({

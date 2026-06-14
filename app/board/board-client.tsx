@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import type { Photo } from "@/lib/types";
 import { FilterBar } from "@/components/filter-bar";
 import { PhotoTile } from "@/components/photo-tile";
@@ -64,6 +65,38 @@ export function BoardClient({
     [router]
   );
 
+  // Her tag edits (e.g. adding a staff name): optimistically update, save, revert on failure.
+  const updateTags = useCallback(
+    async (photo: Photo, tags: string[]) => {
+      const prevTags = photo.tags ?? [];
+      setPhotos((prev) => prev.map((p) => (p.id === photo.id ? { ...p, tags } : p)));
+      const res = await fetch("/api/photos/tags", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: photo.id, tags }),
+      }).catch(() => null);
+      if (!res || !res.ok) {
+        setPhotos((prev) => prev.map((p) => (p.id === photo.id ? { ...p, tags: prevTags } : p)));
+      }
+    },
+    []
+  );
+
+  // Text-safe toggle: marks a photo as safe for graphic text overlay.
+  // Optimistically updates; reverts on failure.
+  const updateTextSafe = useCallback(async (photo: Photo, textSafe: boolean) => {
+    const prev = photo.text_safe;
+    setPhotos((ps) => ps.map((p) => (p.id === photo.id ? { ...p, text_safe: textSafe } : p)));
+    const res = await fetch("/api/photos/text-safe", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: photo.id, textSafe }),
+    }).catch(() => null);
+    if (!res || !res.ok) {
+      setPhotos((ps) => ps.map((p) => (p.id === photo.id ? { ...p, text_safe: prev } : p)));
+    }
+  }, []);
+
   return (
     <div className="flex flex-1 flex-col">
       <FilterBar active={filter} onChange={setFilter} onSync={runSync} progress={progress} />
@@ -72,8 +105,12 @@ export function BoardClient({
         <span>
           {filtered.length} photos{filter !== "all" ? ` in ${labelFor(filter)}` : ""}
         </span>
-        <div className="flex items-center gap-2">
-          {userEmail}
+        <div className="flex items-center gap-3">
+          <Link href="/compose" className="text-zinc-700 underline">New post</Link>
+          <Link href="/create" className="text-zinc-700 underline">Create graphic</Link>
+          <Link href="/posts" className="text-zinc-700 underline">Scheduled</Link>
+          <Link href="/insights" className="text-zinc-700 underline">Insights</Link>
+          <span>{userEmail}</span>
           <form action="/auth/signout" method="post">
             <button className="underline">Sign out</button>
           </form>
@@ -96,6 +133,8 @@ export function BoardClient({
                 key={p.id}
                 photo={p}
                 onReclassify={reclassify}
+                onUpdateTags={updateTags}
+                onTextSafeChange={updateTextSafe}
                 extraCount={!isOpen && idx === 0 && group.length > 1 ? group.length - 1 : undefined}
                 onExpand={() => setExpanded((s) => new Set(s).add(key))}
               />

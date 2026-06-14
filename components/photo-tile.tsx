@@ -1,16 +1,36 @@
 "use client";
 
+import { useState } from "react";
 import { CATEGORIES } from "@/lib/categories";
 import type { Photo } from "@/lib/types";
 
 interface Props {
   photo: Photo;
   onReclassify: (photo: Photo, category: string) => void;
+  onUpdateTags: (photo: Photo, tags: string[]) => void;
+  onTextSafeChange?: (photo: Photo, textSafe: boolean) => void;
   extraCount?: number;
   onExpand?: () => void;
 }
 
-export function PhotoTile({ photo, onReclassify, extraCount, onExpand }: Props) {
+export function PhotoTile({ photo, onReclassify, onUpdateTags, onTextSafeChange, extraCount, onExpand }: Props) {
+  const [editing, setEditing] = useState(false);
+  const [newTag, setNewTag] = useState("");
+  const tags = photo.tags ?? [];
+
+  function addTag() {
+    const t = newTag.trim();
+    if (!t) return;
+    if (!tags.some((x) => x.toLowerCase() === t.toLowerCase())) {
+      onUpdateTags(photo, [...tags, t]);
+    }
+    setNewTag("");
+  }
+
+  function removeTag(tag: string) {
+    onUpdateTags(photo, tags.filter((x) => x !== tag));
+  }
+
   return (
     <div className="relative aspect-square overflow-hidden rounded-lg border border-zinc-200 bg-zinc-100">
       {/* Thumbnails are pre-sized; serve them plainly, not through next/image. */}
@@ -37,6 +57,14 @@ export function PhotoTile({ photo, onReclassify, extraCount, onExpand }: Props) 
         </span>
       )}
 
+      {/* Tag button — opens the editor overlay. Shows a count if she's added tags. */}
+      <button
+        onClick={() => setEditing(true)}
+        className="absolute bottom-12 right-2 rounded bg-black/60 px-2 py-0.5 text-xs text-white"
+      >
+        🏷 {tags.length || "tag"}
+      </button>
+
       {/* The category dropdown IS the correction control: change it → the file moves. */}
       <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-2">
         <select
@@ -51,6 +79,53 @@ export function PhotoTile({ photo, onReclassify, extraCount, onExpand }: Props) 
           ))}
         </select>
       </div>
+
+      {/* Tag editor: overlays the thumbnail so there's room to type, even on mobile. */}
+      {editing && (
+        <div className="absolute inset-0 flex flex-col bg-white/97 p-2 text-zinc-800">
+          <div className="mb-1 flex items-center justify-between">
+            <span className="text-xs font-medium text-zinc-500">Tags</span>
+            <button onClick={() => setEditing(false)} className="text-xs text-zinc-500 underline">
+              Done
+            </button>
+          </div>
+          <div className="flex flex-1 flex-wrap content-start gap-1 overflow-y-auto">
+            {tags.length === 0 && <span className="text-xs text-zinc-400">No tags yet.</span>}
+            {tags.map((t) => (
+              <span key={t} className="flex items-center gap-1 rounded-full bg-zinc-100 px-2 py-0.5 text-xs">
+                {t}
+                <button onClick={() => removeTag(t)} className="text-zinc-400 hover:text-red-600">
+                  ×
+                </button>
+              </span>
+            ))}
+          </div>
+          <div className="mt-1 flex gap-1">
+            <input
+              value={newTag}
+              onChange={(e) => setNewTag(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && addTag()}
+              placeholder="Add a name or tag…"
+              className="w-full rounded border border-zinc-300 px-2 py-1 text-xs"
+              autoFocus
+            />
+            <button onClick={addTag} className="shrink-0 rounded bg-zinc-900 px-2 py-1 text-xs text-white">
+              Add
+            </button>
+          </div>
+          {/* Text-safe toggle: marks this photo as safe for graphic text overlay. */}
+          {onTextSafeChange && (
+            <label className="mt-2 flex cursor-pointer items-center gap-1.5 text-xs text-zinc-600">
+              <input
+                type="checkbox"
+                checked={photo.text_safe ?? false}
+                onChange={(e) => onTextSafeChange(photo, e.target.checked)}
+              />
+              Safe for text overlay (graphic backgrounds)
+            </label>
+          )}
+        </div>
+      )}
     </div>
   );
 }

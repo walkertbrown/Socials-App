@@ -14,6 +14,30 @@ export const CATEGORIES = [
 // CATEGORIES so "Videos" never shows up as a board filter chip or a re-file option.
 export const VIDEO = { key: "videos", label: "Videos", match: /video/i } as const;
 
+// Cross-cutting "feature" tags the AI may apply to a photo (a photo can carry
+// several at once — e.g. a bartender pouring wine = staff + wine + bar). These are
+// many-to-many, unlike the single physical category, and power the intent search +
+// one-tap filters ("Staff Features"). The AI may also add a few free keywords beyond
+// this list for specifics it can see (e.g. "shrimp", "oysters").
+export const FEATURE_TAGS = [
+  "staff",
+  "food",
+  "dessert",
+  "cocktail",
+  "wine",
+  "dining room",
+  "bar",
+  "patio",
+  "exterior",
+  "event",
+  "crowd",
+  "live music",
+  "holiday",
+  "group",
+  "portrait",
+  "seafood",
+] as const;
+
 // Everything that maps to a destination folder (the categories + the videos bin).
 export const FOLDER_TARGETS = [...CATEGORIES, VIDEO];
 

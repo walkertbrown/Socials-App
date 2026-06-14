@@ -7,8 +7,9 @@ import "server-only";
 // Fallback: if BROWSERLESS_API_KEY is absent, throws a clear error at render
 // time — the app still compiles and everything else still works.
 
+// Browserless v2 regional cloud endpoint (the old chrome.browserless.io host is v1).
 const BROWSERLESS_SCREENSHOT_URL =
-  "https://chrome.browserless.io/screenshot";
+  "https://production-sfo.browserless.io/screenshot";
 
 export interface RenderOptions {
   html: string;
@@ -36,13 +37,15 @@ export async function renderToPng(options: RenderOptions): Promise<Buffer> {
       clip: { x: 0, y: 0, width: options.width, height: options.height },
       omitBackground: false,
     },
-    // Ensure Google Fonts are fetched before screenshotting.
-    waitFor: 1000,
     viewport: {
       width: options.width,
       height: options.height,
       deviceScaleFactor: 1,
     },
+    // Browserless v2: `gotoOptions` applies to setContent; waiting for network
+    // idle ensures the Google Fonts finish loading before the screenshot.
+    // (The v1 top-level `waitFor` is rejected by v2's strict body schema.)
+    gotoOptions: { waitUntil: "networkidle0", timeout: 15000 },
   };
 
   const res = await fetch(`${BROWSERLESS_SCREENSHOT_URL}?token=${apiKey}`, {

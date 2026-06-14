@@ -1,12 +1,1 @@
-{
-  "crons": [
-    {
-      "path": "/api/cron/publish-due",
-      "schedule": "*/30 * * * *"
-    },
-    {
-      "path": "/api/cron/weekly-report",
-      "schedule": "0 9 * * 1"
-    }
-  ]
-}
+{}

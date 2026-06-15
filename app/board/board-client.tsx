@@ -97,6 +97,24 @@ export function BoardClient({
     }
   }, []);
 
+  // Inline rename: optimistically updates display_name; reverts on failure.
+  const renamePhoto = useCallback(async (photo: Photo, name: string) => {
+    const prev = photo.display_name;
+    setPhotos((ps) =>
+      ps.map((p) => (p.id === photo.id ? { ...p, display_name: name || null } : p))
+    );
+    const res = await fetch("/api/photos/rename", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: photo.id, name }),
+    }).catch(() => null);
+    if (!res || !res.ok) {
+      setPhotos((ps) =>
+        ps.map((p) => (p.id === photo.id ? { ...p, display_name: prev } : p))
+      );
+    }
+  }, []);
+
   return (
     <div className="flex flex-1 flex-col">
       <FilterBar active={filter} onChange={setFilter} onSync={runSync} progress={progress} />
@@ -134,6 +152,7 @@ export function BoardClient({
                 photo={p}
                 onReclassify={reclassify}
                 onUpdateTags={updateTags}
+                onRename={renamePhoto}
                 onTextSafeChange={updateTextSafe}
                 extraCount={!isOpen && idx === 0 && group.length > 1 ? group.length - 1 : undefined}
                 onExpand={() => setExpanded((s) => new Set(s).add(key))}

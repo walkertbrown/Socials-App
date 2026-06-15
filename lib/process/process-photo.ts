@@ -1,104 +1,100 @@
 import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { fetchDriveFile, getMimeType } from "@/lib/drive/fetch-file";
+import { getOriginal } from "@/lib/storage/index";
+import { getMimeType } from "@/lib/drive/fetch-file";
 import { createThumbnail, storeThumbnail } from "@/lib/process/make-thumbnail";
 import { hashAndGroup } from "@/lib/process/perceptual-hash";
 import { analyzePhoto } from "@/lib/process/vision-tag";
-import { moveFile } from "@/lib/drive/move-file";
 import { makeVideoThumbnail } from "@/lib/process/video-thumbnail";
 
 export interface ProcessResult {
   id: string;
   status: "ready";
   category?: string;
-  moved?: boolean;
   skipped?: boolean;
 }
 
-// Processes exactly ONE item. Photos: thumbnail -> hash -> categorize -> move.
-// Videos: skip all that and just sweep into the Videos folder.
+// Processes exactly ONE item. Photos: thumbnail -> hash -> categorize.
+// Videos: preview frame thumbnail + description, then mark ready.
+// Organization is DB-only — no object moves happen in MinIO.
 export async function processOnePhoto(photoId: string): Promise<ProcessResult> {
   const supabase = createAdminClient();
 
   const { data: photo } = await supabase
     .from("photos")
-    .select("id, drive_file_id, drive_name, status, category")
+    .select(
+      "id, drive_file_id, drive_name, object_key, storage_backend, display_name, status, category"
+    )
     .eq("id", photoId)
     .maybeSingle();
   if (!photo) throw new Error("Photo not found");
 
-  // Idempotency: already done -> no download / vision / move work.
+  // Idempotency: already processed → skip all heavy work.
   if (photo.status === "ready" && photo.category) {
     return { id: photoId, status: "ready", skipped: true };
   }
 
-  const { data: config } = await supabase
-    .from("app_config")
-    .select("category_folder_map")
-    .eq("id", 1)
-    .maybeSingle();
-  const folderMap: Record<string, string> = config?.category_folder_map ?? {};
+  // Determine mime type. For MinIO photos we can't do a cheap metadata call the way
+  // we could with Drive, so we infer from the object key. For legacy Drive rows we
+  // still use the Drive getMimeType call so we don't break anything in the old path.
+  let mimeType = "";
+  if (photo.storage_backend === "minio" || !photo.drive_file_id) {
+    mimeType = mimeFromKey(photo.object_key ?? "");
+  } else {
+    mimeType = await getMimeType(photo.drive_file_id);
+  }
 
-  // Videos: skip the photo pipeline. Pull ONE frame by streaming (never download
-  // the whole video) for a preview thumbnail + a search description, then sweep it
-  // into the Videos folder. All best-effort — a missing frame won't block the move.
-  const mimeType = await getMimeType(photo.drive_file_id);
+  // Videos: extract one preview frame, describe it, then mark ready.
+  // No file move — category lives in the DB.
   if (mimeType.startsWith("video/")) {
     let thumbnailPath: string | null = null;
     let description: string | null = null;
     let tags: string[] = ["videos"];
     try {
-      const { path, frame } = await makeVideoThumbnail(photo.drive_file_id);
+      // makeVideoThumbnail currently streams from Drive. For MinIO videos it will
+      // fall back to an error (caught below) until that function is updated.
+      // The catch means videos are still marked ready; they just won't have a thumb.
+      const frameKey = photo.object_key ?? photo.drive_file_id ?? "";
+      const { path, frame } = await makeVideoThumbnail(frameKey);
       thumbnailPath = path;
       const analysis = await analyzePhoto(frame);
       if (analysis.description) description = analysis.description;
       if (analysis.tags.length) tags = analysis.tags;
     } catch {
-      /* no ffmpeg / unreadable video — keep going; it just won't be selectable yet */
+      /* missing frame is non-fatal — the tile shows without a thumbnail */
     }
 
-    let currentFolderId: string | null = null;
-    const dest = folderMap["videos"];
-    if (dest) {
-      try {
-        await moveFile(photo.drive_file_id, dest);
-        currentFolderId = dest;
-      } catch {
-        currentFolderId = null;
-      }
-    }
     await supabase
       .from("photos")
       .update({
         category: "videos",
-        current_folder_id: currentFolderId,
-        moved_at: currentFolderId ? new Date().toISOString() : null,
         thumbnail_path: thumbnailPath,
         description,
         tags,
         status: "ready",
       })
       .eq("id", photoId);
-    return { id: photoId, status: "ready", category: "videos", moved: !!currentFolderId };
+    return { id: photoId, status: "ready", category: "videos" };
   }
 
-  // Photos: the full pipeline.
-  const original = await fetchDriveFile(photo.drive_file_id);
+  // Photos: full pipeline. Download original from whatever backend holds it.
+  const original = await getOriginal({
+    id: photo.id,
+    storage_backend: photo.storage_backend,
+    object_key: photo.object_key,
+    drive_file_id: photo.drive_file_id,
+    display_name: photo.display_name,
+    drive_name: photo.drive_name,
+  });
+
   const thumb = await createThumbnail(original);
-  const thumbnailPath = await storeThumbnail(photo.drive_file_id, thumb);
+
+  // Thumbnail is keyed by photo id (not drive_file_id) so new MinIO photos get
+  // a stable path whether or not they have a Drive id.
+  const thumbnailPath = await storeThumbnailById(photoId, thumb);
+
   const { hash, duplicateGroupId } = await hashAndGroup(thumb);
   const { category, description, tags } = await analyzePhoto(thumb);
-
-  let currentFolderId: string | null = null;
-  const dest = folderMap[category];
-  if (dest) {
-    try {
-      await moveFile(photo.drive_file_id, dest);
-      currentFolderId = dest;
-    } catch {
-      currentFolderId = null;
-    }
-  }
 
   await supabase
     .from("photos")
@@ -108,12 +104,33 @@ export async function processOnePhoto(photoId: string): Promise<ProcessResult> {
       duplicate_group_id: duplicateGroupId,
       category,
       description,
-      current_folder_id: currentFolderId,
-      moved_at: currentFolderId ? new Date().toISOString() : null,
       tags: tags.length ? tags : [category],
       status: "ready",
     })
     .eq("id", photoId);
 
-  return { id: photoId, status: "ready", category, moved: !!currentFolderId };
+  return { id: photoId, status: "ready", category };
+}
+
+// Infer a broad mime type from a MinIO object key extension.
+// Only needs to distinguish "video/" from everything else.
+function mimeFromKey(key: string): string {
+  const ext = key.split(".").pop()?.toLowerCase() ?? "";
+  if (["mp4", "mov", "m4v", "avi", "mkv", "webm"].includes(ext)) {
+    return "video/" + ext;
+  }
+  return "image/" + (ext || "jpeg");
+}
+
+// Store the thumbnail under the photo's UUID so new MinIO photos don't need a Drive id.
+// (The existing storeThumbnail uses drive_file_id as the key; this uses photo id instead.)
+async function storeThumbnailById(photoId: string, thumbnail: Buffer): Promise<string> {
+  const { createAdminClient } = await import("@/lib/supabase/admin");
+  const supabase = createAdminClient();
+  const path = `${photoId}.jpg`;
+  const { error } = await supabase.storage
+    .from("thumbnails")
+    .upload(path, thumbnail, { contentType: "image/jpeg", upsert: true });
+  if (error) throw new Error(`Thumbnail upload failed: ${error.message}`);
+  return path;
 }

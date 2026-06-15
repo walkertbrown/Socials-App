@@ -5,6 +5,7 @@ import type { Photo } from "@/lib/types";
 // Insert placeholder rows for files we haven't seen before. The unique
 // constraint on drive_file_id makes this idempotent: re-syncing the same
 // folder inserts nothing for already-known photos. Returns the new count.
+// (Legacy path — used if Drive sync is still active.)
 export async function insertPlaceholders(
   files: { id: string; name: string }[]
 ): Promise<number> {
@@ -13,11 +14,33 @@ export async function insertPlaceholders(
   const rows = files.map((f) => ({
     drive_file_id: f.id,
     drive_name: f.name,
+    storage_backend: "drive",
     status: "processing" as const,
   }));
   const { data, error } = await supabase
     .from("photos")
     .upsert(rows, { onConflict: "drive_file_id", ignoreDuplicates: true })
+    .select("id");
+  if (error) throw new Error(error.message);
+  return data?.length ?? 0;
+}
+
+// Insert placeholder rows for MinIO objects. Keyed on object_key (the unique MinIO
+// path) so idempotency works without Drive ids. Returns the count of new rows only.
+export async function insertMinioPlaceholders(
+  objects: { key: string; name: string }[]
+): Promise<number> {
+  if (objects.length === 0) return 0;
+  const supabase = createAdminClient();
+  const rows = objects.map((o) => ({
+    object_key: o.key,
+    drive_name: o.name,
+    storage_backend: "minio",
+    status: "processing" as const,
+  }));
+  const { data, error } = await supabase
+    .from("photos")
+    .upsert(rows, { onConflict: "object_key", ignoreDuplicates: true })
     .select("id");
   if (error) throw new Error(error.message);
   return data?.length ?? 0;
@@ -131,4 +154,33 @@ export async function getTextSafePhotos(): Promise<MatchablePhoto[]> {
     .eq("text_safe", true)
     .neq("category", "videos");
   return (data ?? []) as MatchablePhoto[];
+}
+
+// Fetch only the fields needed by the storage adapter (used by the download route).
+export async function getPhotoForStorage(
+  id: string
+): Promise<{
+  id: string;
+  storage_backend: string | null;
+  object_key: string | null;
+  drive_file_id: string | null;
+  display_name: string | null;
+  drive_name: string | null;
+} | null> {
+  const supabase = createAdminClient();
+  const { data } = await supabase
+    .from("photos")
+    .select("id, storage_backend, object_key, drive_file_id, display_name, drive_name")
+    .eq("id", id)
+    .maybeSingle();
+  return data ?? null;
+}
+
+// Set a user-facing name for a photo (shown on the board; used in download filename).
+// Trims whitespace and caps at 200 characters to stay reasonable in filenames.
+export async function setDisplayName(id: string, name: string): Promise<string> {
+  const cleaned = name.trim().slice(0, 200);
+  const supabase = createAdminClient();
+  await supabase.from("photos").update({ display_name: cleaned || null }).eq("id", id);
+  return cleaned;
 }

@@ -4,8 +4,11 @@ export type PhotoStatus = "processing" | "ready";
 
 export interface Photo {
   id: string;
-  drive_file_id: string;
+  drive_file_id: string | null;
   drive_name: string | null;
+  object_key: string | null;
+  storage_backend: string | null;
+  display_name: string | null;
   thumbnail_path: string | null;
   tags: string[] | null;
   description: string | null;

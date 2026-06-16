@@ -92,7 +92,7 @@ export function ReviewView({ photos: initialPhotos, onApproved }: Props) {
 
   if (photos.length === 0) {
     return (
-      <p className="px-4 py-6 text-sm text-zinc-400">
+      <p className="px-4 py-6 text-sm" style={{ color: "var(--text-dim)" }}>
         No photos pending review.
       </p>
     );
@@ -101,12 +101,13 @@ export function ReviewView({ photos: initialPhotos, onApproved }: Props) {
   return (
     <div className="px-4 py-4">
       <div className="mb-3 flex items-center justify-between">
-        <h2 className="text-sm font-medium text-zinc-700">
+        <h2 className="text-sm font-medium" style={{ color: "var(--text-primary)" }}>
           Review ({photos.length} photo{photos.length !== 1 ? "s" : ""})
         </h2>
         <button
           onClick={approveAll}
-          className="rounded-md bg-zinc-900 px-3 py-1.5 text-sm text-white hover:bg-zinc-700"
+          className="rounded-md px-3 py-1.5 text-sm font-medium transition-colors hover:opacity-90"
+          style={{ background: "var(--gold)", color: "var(--bg)" }}
         >
           Approve all
         </button>
@@ -151,9 +152,12 @@ function ReviewTile({ photo, isBusy, onCategoryChange, onRename, onApprove }: Ti
   }
 
   return (
-    <div className="relative flex flex-col overflow-hidden rounded-lg border border-zinc-200 bg-white">
+    <div
+      className="relative flex flex-col overflow-hidden rounded-lg"
+      style={{ border: "1px solid var(--border)", background: "var(--surface)" }}
+    >
       {/* Thumbnail */}
-      <div className="relative aspect-square bg-zinc-100">
+      <div className="relative aspect-square" style={{ background: "var(--surface-hi)" }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={`/api/thumb/${photo.id}`}
@@ -162,8 +166,8 @@ function ReviewTile({ photo, isBusy, onCategoryChange, onRename, onApprove }: Ti
           className="h-full w-full object-cover"
         />
         {isBusy && (
-          <div className="absolute inset-0 flex items-center justify-center bg-white/70">
-            <span className="text-xs text-zinc-500">Approving…</span>
+          <div className="absolute inset-0 flex items-center justify-center" style={{ background: "rgba(0,0,0,0.5)" }}>
+            <span className="text-xs" style={{ color: "var(--text-secondary)" }}>Approving…</span>
           </div>
         )}
       </div>
@@ -174,7 +178,12 @@ function ReviewTile({ photo, isBusy, onCategoryChange, onRename, onApprove }: Ti
         <select
           value={photo.category ?? "unsorted"}
           onChange={(e) => onCategoryChange(photo.id, e.target.value)}
-          className="w-full rounded border border-zinc-200 px-1.5 py-1 text-xs text-zinc-700"
+          className="w-full rounded px-1.5 py-1 text-xs"
+          style={{
+            border: "1px solid var(--border-hi)",
+            background: "var(--surface-hi)",
+            color: "var(--text-primary)",
+          }}
         >
           {CATEGORIES.map((c) => (
             <option key={c.key} value={c.key}>
@@ -184,8 +193,8 @@ function ReviewTile({ photo, isBusy, onCategoryChange, onRename, onApprove }: Ti
         </select>
 
         {/* Destination folder (read-only) */}
-        <p className="text-xs text-zinc-400">
-          → <span className="font-medium text-zinc-500">{destFolder}</span>
+        <p className="text-xs" style={{ color: "var(--text-dim)" }}>
+          → <span className="font-medium" style={{ color: "var(--text-secondary)" }}>{destFolder}</span>
         </p>
 
         {/* Editable name */}
@@ -198,12 +207,18 @@ function ReviewTile({ photo, isBusy, onCategoryChange, onRename, onApprove }: Ti
                 if (e.key === "Enter") submitRename();
                 if (e.key === "Escape") setEditingName(false);
               }}
-              className="w-full rounded border border-zinc-300 px-1.5 py-1 text-xs"
+              className="w-full rounded px-1.5 py-1 text-xs"
+              style={{
+                border: "1px solid var(--border-hi)",
+                background: "var(--surface-hi)",
+                color: "var(--text-primary)",
+              }}
               autoFocus
             />
             <button
               onClick={submitRename}
-              className="shrink-0 rounded bg-zinc-900 px-2 py-1 text-xs text-white"
+              className="shrink-0 rounded px-2 py-1 text-xs font-medium"
+              style={{ background: "var(--gold)", color: "var(--bg)" }}
             >
               OK
             </button>
@@ -211,10 +226,11 @@ function ReviewTile({ photo, isBusy, onCategoryChange, onRename, onApprove }: Ti
         ) : (
           <button
             onClick={() => { setNameVal(photo.display_name ?? photo.drive_name ?? ""); setEditingName(true); }}
-            className="truncate text-left text-xs text-zinc-500 hover:underline"
+            className="truncate text-left text-xs hover:underline"
+            style={{ color: "var(--text-secondary)" }}
             title={photo.display_name ?? photo.drive_name ?? ""}
           >
-            {photo.display_name ?? photo.drive_name ?? <em className="text-zinc-400">no name</em>}
+            {photo.display_name ?? photo.drive_name ?? <em style={{ color: "var(--text-dim)" }}>no name</em>}
           </button>
         )}
 
@@ -222,7 +238,8 @@ function ReviewTile({ photo, isBusy, onCategoryChange, onRename, onApprove }: Ti
         <button
           onClick={() => onApprove(photo.id)}
           disabled={isBusy}
-          className="mt-0.5 rounded bg-zinc-900 py-1 text-xs text-white hover:bg-zinc-700 disabled:opacity-50"
+          className="mt-0.5 rounded py-1 text-xs font-medium transition-colors hover:opacity-90 disabled:opacity-50"
+          style={{ background: "var(--gold)", color: "var(--bg)" }}
         >
           Approve
         </button>

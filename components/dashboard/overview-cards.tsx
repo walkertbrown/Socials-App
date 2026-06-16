@@ -10,31 +10,76 @@ export function OverviewCards({ summary }: OverviewCardsProps) {
 
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-      <Link href="/board" className="group block rounded-xl border border-zinc-200 bg-white p-5 hover:border-[#0f3d3e]/40 transition-colors">
-        <div className="text-3xl font-bold" style={{ color: "#0f3d3e" }}>
+      <Link
+        href="/board"
+        className="group block p-5 transition-colors"
+        style={{
+          background: "var(--surface)",
+          border: "1px solid var(--border)",
+          borderRadius: "var(--radius)",
+        }}
+        onMouseEnter={(e) => {
+          (e.currentTarget as HTMLElement).style.borderColor = "var(--gold-border)";
+          (e.currentTarget as HTMLElement).style.background = "var(--gold-dim)";
+        }}
+        onMouseLeave={(e) => {
+          (e.currentTarget as HTMLElement).style.borderColor = "var(--border)";
+          (e.currentTarget as HTMLElement).style.background = "var(--surface)";
+        }}
+      >
+        <div className="text-3xl font-bold tabular-nums" style={{ color: "var(--gold)" }}>
           {pendingReviewCount}
         </div>
-        <div className="mt-1 text-sm font-medium text-zinc-700">Pending review</div>
-        <div className="mt-0.5 text-xs text-zinc-400">Uploads awaiting approval</div>
+        <div className="mt-1 text-sm font-medium" style={{ color: "var(--text-primary)" }}>Pending review</div>
+        <div className="mt-0.5 text-xs" style={{ color: "var(--text-dim)" }}>Uploads awaiting approval</div>
       </Link>
 
-      <Link href="/posts" className="group block rounded-xl border border-zinc-200 bg-white p-5 hover:border-[#0f3d3e]/40 transition-colors">
-        <div className="text-3xl font-bold" style={{ color: "#0f3d3e" }}>
+      <Link
+        href="/posts"
+        className="group block p-5 transition-colors"
+        style={{
+          background: "var(--surface)",
+          border: "1px solid var(--border)",
+          borderRadius: "var(--radius)",
+        }}
+        onMouseEnter={(e) => {
+          (e.currentTarget as HTMLElement).style.borderColor = "var(--gold-border)";
+          (e.currentTarget as HTMLElement).style.background = "var(--gold-dim)";
+        }}
+        onMouseLeave={(e) => {
+          (e.currentTarget as HTMLElement).style.borderColor = "var(--border)";
+          (e.currentTarget as HTMLElement).style.background = "var(--surface)";
+        }}
+      >
+        <div className="text-3xl font-bold tabular-nums" style={{ color: "var(--gold)" }}>
           {upcomingPostCount}
         </div>
-        <div className="mt-1 text-sm font-medium text-zinc-700">Upcoming posts</div>
-        <div className="mt-0.5 text-xs text-zinc-400">Scheduled and ready to publish</div>
+        <div className="mt-1 text-sm font-medium" style={{ color: "var(--text-primary)" }}>Upcoming posts</div>
+        <div className="mt-0.5 text-xs" style={{ color: "var(--text-dim)" }}>Scheduled and ready to publish</div>
       </Link>
 
       <Link
         href={latestInsightsWeek ? `/insights?week=${latestInsightsWeek}` : "/insights"}
-        className="group block rounded-xl border border-zinc-200 bg-white p-5 hover:border-[#0f3d3e]/40 transition-colors"
+        className="group block p-5 transition-colors"
+        style={{
+          background: "var(--surface)",
+          border: "1px solid var(--border)",
+          borderRadius: "var(--radius)",
+        }}
+        onMouseEnter={(e) => {
+          (e.currentTarget as HTMLElement).style.borderColor = "var(--gold-border)";
+          (e.currentTarget as HTMLElement).style.background = "var(--gold-dim)";
+        }}
+        onMouseLeave={(e) => {
+          (e.currentTarget as HTMLElement).style.borderColor = "var(--border)";
+          (e.currentTarget as HTMLElement).style.background = "var(--surface)";
+        }}
       >
-        <div className="text-3xl font-bold" style={{ color: "#0f3d3e" }}>
+        <div className="text-3xl font-bold tabular-nums" style={{ color: "var(--gold)" }}>
           {latestInsightsWeek ?? "—"}
         </div>
-        <div className="mt-1 text-sm font-medium text-zinc-700">Latest insights</div>
-        <div className="mt-0.5 text-xs text-zinc-400">Most recent analytics week</div>
+        <div className="mt-1 text-sm font-medium" style={{ color: "var(--text-primary)" }}>Latest insights</div>
+        <div className="mt-0.5 text-xs" style={{ color: "var(--text-dim)" }}>Most recent analytics week</div>
       </Link>
     </div>
   );

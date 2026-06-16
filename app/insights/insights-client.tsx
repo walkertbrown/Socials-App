@@ -71,11 +71,11 @@ export function InsightsClient({ report, availableWeeks, userEmail = "" }: Insig
       <div className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-4 p-4">
         <Header availableWeeks={availableWeeks} selectedWeek={selectedWeek} onWeekChange={handleWeekChange} />
         <div className="flex flex-1 flex-col items-center justify-center py-24 text-center">
-          <p className="text-lg font-medium text-zinc-700">No weekly report yet.</p>
-          <p className="mt-2 text-sm text-zinc-500">
+          <p className="text-lg font-medium" style={{ color: "var(--text-primary)" }}>No weekly report yet.</p>
+          <p className="mt-2 text-sm" style={{ color: "var(--text-secondary)" }}>
             The first report generates after the weekly cron runs (every Monday morning).
           </p>
-          <p className="mt-1 text-xs text-zinc-400">
+          <p className="mt-1 text-xs" style={{ color: "var(--text-dim)" }}>
             Stories are not included. Trend analysis builds after 4 weeks of data.
           </p>
         </div>
@@ -103,7 +103,12 @@ export function InsightsClient({ report, availableWeeks, userEmail = "" }: Insig
       />
 
       {regenError && (
-        <div className="rounded-md bg-red-50 px-4 py-2 text-sm text-red-700">{regenError}</div>
+        <div
+          className="rounded-md px-4 py-2 text-sm"
+          style={{ background: "var(--red-dim)", color: "var(--red)" }}
+        >
+          {regenError}
+        </div>
       )}
 
       {/* Account snapshot */}
@@ -119,9 +124,12 @@ export function InsightsClient({ report, availableWeeks, userEmail = "" }: Insig
       </div>
 
       {report.flag_text && (
-        <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
-          <div className="mb-1 text-sm font-medium text-amber-800">Flag of the Week</div>
-          <p className="text-sm text-amber-900">{report.flag_text}</p>
+        <div
+          className="rounded-lg p-4"
+          style={{ border: "1px solid rgba(217,119,6,0.3)", background: "rgba(217,119,6,0.08)" }}
+        >
+          <div className="mb-1 text-sm font-medium" style={{ color: "oklch(70% 0.15 55)" }}>Flag of the Week</div>
+          <p className="text-sm" style={{ color: "oklch(80% 0.10 55)" }}>{report.flag_text}</p>
         </div>
       )}
 
@@ -135,8 +143,11 @@ export function InsightsClient({ report, availableWeeks, userEmail = "" }: Insig
       <AudienceSnapshot demographics={demographics} />
 
       {/* Goal */}
-      <div className="rounded-lg border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-600">
-        Goal tracked: <span className="font-medium">{payload.goal}</span>
+      <div
+        className="rounded-lg px-4 py-3 text-sm"
+        style={{ border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text-secondary)" }}
+      >
+        Goal tracked: <span className="font-medium" style={{ color: "var(--text-primary)" }}>{payload.goal}</span>
       </div>
     </div>
     </div>
@@ -163,12 +174,22 @@ function Header({
   return (
     <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
       <div className="flex items-center gap-3">
-        <h1 className="text-lg font-semibold">Weekly Insights</h1>
+        <h1
+          className="text-lg"
+          style={{ fontFamily: "var(--font-serif)", fontWeight: 600, color: "var(--text-primary)" }}
+        >
+          Weekly Insights
+        </h1>
         {availableWeeks.length > 0 && (
           <select
             value={selectedWeek}
             onChange={(e) => onWeekChange(e.target.value)}
-            className="rounded-md border border-zinc-300 px-2 py-1 text-sm"
+            className="rounded-md px-2 py-1 text-sm"
+            style={{
+              border: "1px solid var(--border-hi)",
+              background: "var(--surface-hi)",
+              color: "var(--text-primary)",
+            }}
           >
             {availableWeeks.map((w) => (
               <option key={w} value={w}>
@@ -182,7 +203,8 @@ function Header({
         {hasReport && onDownload && (
           <button
             onClick={onDownload}
-            className="rounded-md bg-zinc-900 px-3 py-1.5 text-white text-sm hover:bg-zinc-700"
+            className="rounded-md px-3 py-1.5 text-sm font-medium transition-colors hover:opacity-90"
+            style={{ background: "var(--gold)", color: "var(--bg)" }}
           >
             Download PDF
           </button>
@@ -191,12 +213,13 @@ function Header({
           <button
             onClick={onRegenerate}
             disabled={isRegenerating}
-            className="rounded-md border border-zinc-300 px-3 py-1.5 text-sm disabled:opacity-50"
+            className="rounded-md px-3 py-1.5 text-sm transition-colors disabled:opacity-50"
+            style={{ border: "1px solid var(--border-hi)", color: "var(--text-secondary)", background: "var(--surface-hi)" }}
           >
             {isRegenerating ? "Regenerating…" : "Regenerate"}
           </button>
         )}
-        <Link href="/posts" className="text-zinc-500 underline">
+        <Link href="/posts" className="underline" style={{ color: "var(--text-dim)" }}>
           ← Posts
         </Link>
       </div>
@@ -214,14 +237,17 @@ function NarrativeCard({
   pending: boolean;
 }) {
   return (
-    <div className="rounded-lg border border-zinc-200 bg-white p-4">
-      <div className="mb-2 text-sm font-medium text-zinc-700">{title}</div>
+    <div
+      className="rounded-lg p-4"
+      style={{ border: "1px solid var(--border)", background: "var(--surface)" }}
+    >
+      <div className="mb-2 text-sm font-medium" style={{ color: "var(--text-primary)" }}>{title}</div>
       {pending ? (
-        <p className="text-sm italic text-zinc-400">Narratives generating — check back shortly.</p>
+        <p className="text-sm italic" style={{ color: "var(--text-dim)" }}>Narratives generating — check back shortly.</p>
       ) : text ? (
-        <p className="text-sm leading-relaxed text-zinc-700">{text}</p>
+        <p className="text-sm leading-relaxed" style={{ color: "var(--text-secondary)" }}>{text}</p>
       ) : (
-        <p className="text-sm italic text-zinc-400">Not yet generated.</p>
+        <p className="text-sm italic" style={{ color: "var(--text-dim)" }}>Not yet generated.</p>
       )}
     </div>
   );

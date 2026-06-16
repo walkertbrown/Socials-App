@@ -5,14 +5,15 @@ import type { PostGroup } from "@/lib/db/post-groups";
 import type { ScheduledPost } from "@/lib/db/posts";
 import { utcToCentral } from "@/lib/time";
 
-const STATUS_STYLES: Record<string, string> = {
-  scheduled: "bg-blue-100 text-blue-700",
-  publishing: "bg-amber-100 text-amber-700",
-  published: "bg-emerald-100 text-emerald-700",
-  failed: "bg-red-100 text-red-700",
-  canceled: "bg-zinc-200 text-zinc-500",
-  reminder_sent: "bg-amber-100 text-amber-700",
-  posted: "bg-emerald-100 text-emerald-700",
+// Status badge styles using design tokens
+const STATUS_STYLES: Record<string, React.CSSProperties> = {
+  scheduled: { background: "rgba(56,189,248,0.12)", color: "oklch(72% 0.15 230)" },
+  publishing: { background: "rgba(217,119,6,0.12)", color: "oklch(72% 0.15 55)" },
+  published: { background: "var(--green-dim)", color: "var(--green)" },
+  failed: { background: "var(--red-dim)", color: "var(--red)" },
+  canceled: { background: "var(--surface-hi)", color: "var(--text-dim)" },
+  reminder_sent: { background: "rgba(217,119,6,0.12)", color: "oklch(72% 0.15 55)" },
+  posted: { background: "var(--green-dim)", color: "var(--green)" },
 };
 
 // Friendly status label for a single platform row.
@@ -44,7 +45,10 @@ export function PostGroupCard({ group, onAct }: Props) {
   const isGraphic = group.media_type === "graphic";
 
   return (
-    <div className="rounded-lg border border-zinc-200 p-3">
+    <div
+      className="rounded-lg p-3"
+      style={{ border: "1px solid var(--border)", background: "var(--surface)" }}
+    >
       <div className="flex gap-3">
         {/* Thumbnail: photo/video use auth-gated thumb endpoint; graphics show a label chip */}
         {group.photo_id && !isGraphic && (
@@ -56,22 +60,25 @@ export function PostGroupCard({ group, onAct }: Props) {
           />
         )}
         {isGraphic && (
-          <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded bg-[#1c3149] text-center text-xs font-medium text-[#f3ecdd]">
+          <div
+            className="flex h-16 w-16 shrink-0 items-center justify-center rounded text-center text-xs font-medium"
+            style={{ background: "var(--gold-dim)", color: "var(--gold)", border: "1px solid var(--gold-border)" }}
+          >
             Graphic
           </div>
         )}
 
         <div className="min-w-0 flex-1">
           {/* Caption preview */}
-          <p className="line-clamp-2 text-sm text-zinc-700">
-            {group.caption || <span className="text-zinc-400">No caption</span>}
+          <p className="line-clamp-2 text-sm" style={{ color: "var(--text-primary)" }}>
+            {group.caption || <span style={{ color: "var(--text-dim)" }}>No caption</span>}
           </p>
 
           {isVideo && (
-            <span className="mt-0.5 inline-block text-xs text-zinc-400">video / Reel</span>
+            <span className="mt-0.5 inline-block text-xs" style={{ color: "var(--text-dim)" }}>video / Reel</span>
           )}
           {isGraphic && (
-            <span className="mt-0.5 inline-block text-xs text-zinc-400">branded graphic</span>
+            <span className="mt-0.5 inline-block text-xs" style={{ color: "var(--text-dim)" }}>branded graphic</span>
           )}
 
           {/* Per-platform rows */}
@@ -81,17 +88,18 @@ export function PostGroupCard({ group, onAct }: Props) {
                 row.delivery === "reminder" && row.status === "reminder_sent";
               return (
                 <div key={row.id} className="flex items-center gap-2">
-                  <span className="w-20 text-xs capitalize text-zinc-500">{row.platform}</span>
+                  <span className="w-20 text-xs capitalize" style={{ color: "var(--text-dim)" }}>{row.platform}</span>
                   <span
-                    className={`rounded px-1.5 py-0.5 text-xs capitalize ${STATUS_STYLES[row.status] ?? ""}`}
+                    className="rounded px-1.5 py-0.5 text-xs capitalize"
+                    style={STATUS_STYLES[row.status] ?? {}}
                   >
                     {rowStatusLabel(row)}
                   </span>
-                  <span className="text-xs text-zinc-400">
+                  <span className="text-xs" style={{ color: "var(--text-dim)" }}>
                     {utcToCentral(row.scheduled_at)}
                   </span>
                   {row.error && (
-                    <span className="text-xs text-red-600" title={row.error}>
+                    <span className="text-xs" style={{ color: "var(--red)" }} title={row.error}>
                       error
                     </span>
                   )}
@@ -99,7 +107,8 @@ export function PostGroupCard({ group, onAct }: Props) {
                   {needsPosting && (
                     <Link
                       href={`/post/${row.id}`}
-                      className="text-xs font-medium text-pink-600 underline"
+                      className="text-xs font-medium underline"
+                      style={{ color: "var(--gold)" }}
                     >
                       Post now →
                     </Link>
@@ -107,7 +116,8 @@ export function PostGroupCard({ group, onAct }: Props) {
                   {row.status === "scheduled" && (
                     <button
                       onClick={() => onAct(row.id, "cancel")}
-                      className="text-xs text-zinc-500 underline"
+                      className="text-xs underline"
+                      style={{ color: "var(--text-dim)" }}
                     >
                       Cancel
                     </button>
@@ -115,7 +125,8 @@ export function PostGroupCard({ group, onAct }: Props) {
                   {row.status === "failed" && (
                     <button
                       onClick={() => onAct(row.id, "retry")}
-                      className="text-xs text-blue-600 underline"
+                      className="text-xs underline"
+                      style={{ color: "var(--gold)" }}
                     >
                       Retry
                     </button>

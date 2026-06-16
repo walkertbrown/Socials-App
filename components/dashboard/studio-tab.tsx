@@ -30,12 +30,25 @@ export function StudioTab() {
         <Link
           key={href}
           href={href}
-          className="group block rounded-xl border border-zinc-200 bg-white p-5 transition-colors hover:border-[#0f3d3e] hover:bg-[#0f3d3e]/5"
+          className="group block p-5 transition-colors"
+          style={{
+            background: "var(--surface)",
+            border: "1px solid var(--border)",
+            borderRadius: "var(--radius)",
+          }}
+          onMouseEnter={(e) => {
+            (e.currentTarget as HTMLElement).style.background = "var(--gold-dim)";
+            (e.currentTarget as HTMLElement).style.borderColor = "var(--gold-border)";
+          }}
+          onMouseLeave={(e) => {
+            (e.currentTarget as HTMLElement).style.background = "var(--surface)";
+            (e.currentTarget as HTMLElement).style.borderColor = "var(--border)";
+          }}
         >
-          <div className="text-sm font-semibold text-zinc-900 group-hover:text-[#0f3d3e]">
+          <div className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
             {title}
           </div>
-          <div className="mt-1 text-xs text-zinc-500">{description}</div>
+          <div className="mt-1 text-xs" style={{ color: "var(--text-dim)" }}>{description}</div>
         </Link>
       ))}
     </div>

@@ -1,26 +1,104 @@
 @import "tailwindcss";
 
+/* ── Design tokens — dark is default ───────────────────────────────────────── */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --bg:           #100c09;
+  --surface:      #1c1510;
+  --surface-hi:   #251c15;
+  --cream:        #f2ebe0;
+  --ctext:        #1a1208;
+  --clabel:       #9e9080;
+  --gold:         oklch(58% 0.15 28);
+  --gold-light:   oklch(65% 0.13 28);
+  --gold-dim:     oklch(58% 0.15 28 / 0.12);
+  --gold-border:  oklch(58% 0.15 28 / 0.28);
+  --border:       rgba(255, 240, 220, 0.08);
+  --border-hi:    rgba(255, 240, 220, 0.13);
+  --glass:        rgba(255, 240, 220, 0.03);
+  --text-dim:     #5a4e46;
+  --radius:       14px;
+  --shadow:       0 8px 32px rgba(0, 0, 0, 0.45);
+  --green:        #4ade80;
+  --green-dim:    rgba(74, 222, 128, 0.12);
+  --red:          oklch(58% 0.18 18);
+  --red-dim:      oklch(58% 0.18 18 / 0.1);
+  --text-primary: #f2ebe0;
+  --text-secondary: #9e9080;
 }
 
+/* Explicit dark class (matches default — kept for toggle symmetry) */
+html.dark {
+  --bg:           #100c09;
+  --surface:      #1c1510;
+  --surface-hi:   #251c15;
+  --cream:        #f2ebe0;
+  --ctext:        #1a1208;
+  --clabel:       #9e9080;
+  --gold:         oklch(58% 0.15 28);
+  --gold-light:   oklch(65% 0.13 28);
+  --gold-dim:     oklch(58% 0.15 28 / 0.12);
+  --gold-border:  oklch(58% 0.15 28 / 0.28);
+  --border:       rgba(255, 240, 220, 0.08);
+  --border-hi:    rgba(255, 240, 220, 0.13);
+  --glass:        rgba(255, 240, 220, 0.03);
+  --text-dim:     #5a4e46;
+  --radius:       14px;
+  --shadow:       0 8px 32px rgba(0, 0, 0, 0.45);
+  --green:        #4ade80;
+  --green-dim:    rgba(74, 222, 128, 0.12);
+  --red:          oklch(58% 0.18 18);
+  --red-dim:      oklch(58% 0.18 18 / 0.1);
+  --text-primary: #f2ebe0;
+  --text-secondary: #9e9080;
+}
+
+/* Light mode overrides */
+html.light {
+  --bg:           #f2ebe0;
+  --surface:      #e8dfd0;
+  --surface-hi:   #ddd4c2;
+  --cream:        #100c09;
+  --border:       rgba(20, 14, 8, 0.10);
+  --border-hi:    rgba(20, 14, 8, 0.18);
+  --glass:        rgba(20, 14, 8, 0.03);
+  --text-dim:     #9e9080;
+  --text-primary: #1a1208;
+  --text-secondary: #5a4e46;
+  --shadow:       0 8px 32px rgba(0, 0, 0, 0.12);
+  /* Gold, green, red stay the same */
+}
+
+/* ── Tailwind theme bridge ───────────────────────────────────────────────────
+   These map CSS vars to Tailwind utility names so components can use
+   bg-surface, text-gold, border-default, etc.
+*/
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-bg:         var(--bg);
+  --color-surface:    var(--surface);
+  --color-surface-hi: var(--surface-hi);
+  --color-gold:       var(--gold);
+  --color-gold-light: var(--gold-light);
+  --color-gold-dim:   var(--gold-dim);
+  --color-cream:      var(--cream);
+  --color-text-primary:   var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-dim:   var(--text-dim);
+  --color-green:      var(--green);
+  --color-red:        var(--red);
+  --border-radius-brand: var(--radius);
+  --font-sans: var(--font-outfit);
+  --font-serif: var(--font-crimson);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
+/* ── Base styles ─────────────────────────────────────────────────────────── */
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--bg);
+  color: var(--text-primary);
+  font-family: var(--font-sans), system-ui, sans-serif;
+}
+
+/* Smooth theme transitions on interactive elements only */
+button, a, input, select, textarea {
+  transition-property: background-color, border-color, color;
+  transition-duration: 150ms;
 }

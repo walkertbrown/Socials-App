@@ -35,7 +35,12 @@ export function UploadButton({ onComplete }: Props) {
       <button
         onClick={() => inputRef.current?.click()}
         disabled={anyActive}
-        className="rounded-md border border-zinc-300 px-3 py-1.5 text-sm text-zinc-700 hover:bg-zinc-50 disabled:opacity-50"
+        className="rounded-md px-3 py-1.5 text-sm transition-colors hover:opacity-90 disabled:opacity-50"
+        style={{
+          border: "1px solid var(--border-hi)",
+          color: "var(--text-secondary)",
+          background: "var(--surface-hi)",
+        }}
       >
         Upload photos
       </button>
@@ -49,7 +54,8 @@ export function UploadButton({ onComplete }: Props) {
           {!anyActive && (
             <button
               onClick={clearDone}
-              className="text-xs text-zinc-500 underline"
+              className="text-xs underline"
+              style={{ color: "var(--text-dim)" }}
             >
               Clear
             </button>
@@ -65,20 +71,23 @@ function UploadRow({ upload }: { upload: UploadFile }) {
   const name = file.name.length > 30 ? file.name.slice(0, 28) + "…" : file.name;
 
   return (
-    <div className="flex items-center gap-2 text-xs text-zinc-600">
+    <div className="flex items-center gap-2 text-xs" style={{ color: "var(--text-secondary)" }}>
       <span className="w-40 truncate">{name}</span>
       {stage === "uploading" && (
-        <div className="h-1.5 w-24 overflow-hidden rounded-full bg-zinc-200">
+        <div
+          className="h-1.5 w-24 overflow-hidden rounded-full"
+          style={{ background: "var(--surface-hi)" }}
+        >
           <div
-            className="h-full rounded-full bg-blue-500 transition-all"
-            style={{ width: `${progress}%` }}
+            className="h-full rounded-full transition-all"
+            style={{ width: `${progress}%`, background: "var(--gold)" }}
           />
         </div>
       )}
-      {stage === "presigning" && <span className="text-zinc-400">preparing…</span>}
-      {stage === "processing" && <span className="text-zinc-400">processing…</span>}
-      {stage === "done" && <span className="text-green-600">done</span>}
-      {stage === "error" && <span className="text-red-600" title={error}>failed</span>}
+      {stage === "presigning" && <span style={{ color: "var(--text-dim)" }}>preparing…</span>}
+      {stage === "processing" && <span style={{ color: "var(--text-dim)" }}>processing…</span>}
+      {stage === "done" && <span style={{ color: "var(--green)" }}>done</span>}
+      {stage === "error" && <span style={{ color: "var(--red)" }} title={error}>failed</span>}
     </div>
   );
 }

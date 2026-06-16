@@ -63,8 +63,10 @@ export function PostClient({ id, photoId, caption, platforms, done, isExemplar =
 
   return (
     <div className="mx-auto flex w-full max-w-md flex-1 flex-col gap-4 p-4">
-      <h1 className="text-lg font-semibold">Time to post your video 🎬</h1>
-      <p className="text-sm text-zinc-500">For {platforms.join(" + ")}.</p>
+      <h1 className="text-lg font-semibold" style={{ color: "var(--text-primary)" }}>
+        Time to post your video 🎬
+      </h1>
+      <p className="text-sm" style={{ color: "var(--text-secondary)" }}>For {platforms.join(" + ")}.</p>
 
       {/* Watch it right here — streamed from Drive through the app. Sized to the
           clip's own aspect ratio so vertical Reels aren't letterboxed. */}
@@ -81,15 +83,16 @@ export function PostClient({ id, photoId, caption, platforms, done, isExemplar =
 
       <a
         href={`/api/videos/${photoId}/download?download=1`}
-        className="rounded-md bg-zinc-900 px-4 py-3 text-center text-sm font-medium text-white"
+        className="rounded-md px-4 py-3 text-center text-sm font-medium transition-colors hover:opacity-90"
+        style={{ background: "var(--gold)", color: "var(--bg)" }}
       >
         1. Save video to phone
       </a>
 
       <div>
         <div className="mb-1 flex items-center justify-between">
-          <span className="text-sm font-medium text-zinc-700">2. Caption</span>
-          <button onClick={copyCaption} className="text-xs text-blue-600 underline">
+          <span className="text-sm font-medium" style={{ color: "var(--text-primary)" }}>2. Caption</span>
+          <button onClick={copyCaption} className="text-xs underline" style={{ color: "var(--gold)" }}>
             {copied ? "Copied ✓" : "Copy"}
           </button>
         </div>
@@ -97,7 +100,12 @@ export function PostClient({ id, photoId, caption, platforms, done, isExemplar =
           readOnly
           value={caption}
           rows={5}
-          className="w-full rounded-md border border-zinc-300 p-2 text-sm"
+          className="w-full rounded-md p-2 text-sm"
+          style={{
+            border: "1px solid var(--border-hi)",
+            background: "var(--surface-hi)",
+            color: "var(--text-primary)",
+          }}
         />
       </div>
 
@@ -111,14 +119,18 @@ export function PostClient({ id, photoId, caption, platforms, done, isExemplar =
       </a>
 
       {posted ? (
-        <div className="rounded-md bg-emerald-50 p-3 text-center text-sm text-emerald-700">
+        <div
+          className="rounded-md p-3 text-center text-sm"
+          style={{ background: "var(--green-dim)", color: "var(--green)" }}
+        >
           Marked as posted ✓ <Link href="/posts" className="underline">Back to posts</Link>
         </div>
       ) : (
         <button
           onClick={markPosted}
           disabled={saving}
-          className="rounded-md bg-emerald-600 px-4 py-3 text-sm font-medium text-white disabled:opacity-50"
+          className="rounded-md px-4 py-3 text-sm font-medium transition-colors hover:opacity-90 disabled:opacity-50"
+          style={{ background: "var(--green)", color: "#0a2d14" }}
         >
           {saving ? "Saving…" : "✓ Mark as posted"}
         </button>
@@ -130,18 +142,19 @@ export function PostClient({ id, photoId, caption, platforms, done, isExemplar =
           onClick={toggleExemplar}
           disabled={exemplarSaving}
           title={exemplar ? "Remove from AI voice examples" : "Pin as AI voice example"}
-          className={`text-xl disabled:opacity-40 ${exemplar ? "text-yellow-400" : "text-zinc-300"}`}
+          className="text-xl disabled:opacity-40"
+          style={{ color: exemplar ? "var(--gold)" : "var(--text-dim)" }}
         >
           ★
         </button>
-        <span className="text-xs text-zinc-500">
+        <span className="text-xs" style={{ color: "var(--text-secondary)" }}>
           {exemplar
             ? "Pinned as a voice example — AI will always use this caption style"
             : "Pin as a voice example for future AI drafts"}
         </span>
       </div>
 
-      <Link href="/posts" className="text-center text-xs text-zinc-400 underline">
+      <Link href="/posts" className="text-center text-xs underline" style={{ color: "var(--text-dim)" }}>
         ← All posts
       </Link>
     </div>

@@ -113,14 +113,16 @@ export function MenuClient() {
   }
 
   return (
-    <div style={{ maxWidth: 720, margin: "0 auto", padding: "32px 20px" }}>
-      <h1 style={{ fontSize: 24, fontWeight: 700, marginBottom: 6, color: "#111" }}>Menu Maker</h1>
-      <p style={{ fontSize: 13, color: "#888", marginBottom: 24 }}>
+    <div style={{ maxWidth: 720, margin: "0 auto", padding: "32px 20px", background: "var(--bg)", minHeight: "100vh", color: "var(--text-primary)" }}>
+      <h1 style={{ fontSize: 24, fontWeight: 700, marginBottom: 6, fontFamily: "var(--font-serif)", color: "var(--text-primary)" }}>
+        Menu Maker
+      </h1>
+      <p style={{ fontSize: 13, color: "var(--text-secondary)", marginBottom: 24 }}>
         PDF menu → full-page PNG (Google) + square sections (Instagram).
       </p>
 
       {error && (
-        <div style={{ background: "#fff0f0", border: "1px solid #fca5a5", borderRadius: 6, padding: "10px 14px", fontSize: 13, color: "#b91c1c", marginBottom: 16 }}>
+        <div style={{ background: "var(--red-dim)", border: "1px solid var(--red)", borderRadius: 6, padding: "10px 14px", fontSize: 13, color: "var(--red)", marginBottom: 16 }}>
           {error}
         </div>
       )}
@@ -128,9 +130,9 @@ export function MenuClient() {
       {(step === "idle" || step === "loading-preview") && (
         <form onSubmit={handleUpload} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           <input type="file" name="pdf" accept="application/pdf" required
-            style={{ fontSize: 14, color: "#555" }} />
+            style={{ fontSize: 14, color: "var(--text-secondary)" }} />
           <button type="submit" disabled={step === "loading-preview"}
-            style={{ alignSelf: "flex-start", padding: "8px 20px", background: "#0f3d3e", color: "#fff", border: "none", borderRadius: 6, fontSize: 14, fontWeight: 600, cursor: "pointer", opacity: step === "loading-preview" ? 0.6 : 1 }}>
+            style={{ alignSelf: "flex-start", padding: "8px 20px", background: "var(--gold)", color: "var(--bg)", border: "none", borderRadius: 6, fontSize: 14, fontWeight: 600, cursor: "pointer", opacity: step === "loading-preview" ? 0.6 : 1 }}>
             {step === "loading-preview" ? "Rendering preview…" : "Upload & Preview"}
           </button>
         </form>
@@ -138,14 +140,14 @@ export function MenuClient() {
 
       {(step === "preview" || step === "generating") && previewSrc && (
         <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-          <p style={{ fontSize: 12, color: "#888" }}>Click to add cut lines. Drag to adjust. Click × to remove.</p>
+          <p style={{ fontSize: 12, color: "var(--text-dim)" }}>Click to add cut lines. Drag to adjust. Click × to remove.</p>
           <CutLineEditor previewSrc={previewSrc} onChange={setCuts} />
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             <button onClick={handleGenerate} disabled={cuts.length === 0 || step === "generating"}
-              style={{ padding: "8px 20px", background: "#0f3d3e", color: "#fff", border: "none", borderRadius: 6, fontSize: 14, fontWeight: 600, cursor: "pointer", opacity: (cuts.length === 0 || step === "generating") ? 0.5 : 1 }}>
+              style={{ padding: "8px 20px", background: "var(--gold)", color: "var(--bg)", border: "none", borderRadius: 6, fontSize: 14, fontWeight: 600, cursor: "pointer", opacity: (cuts.length === 0 || step === "generating") ? 0.5 : 1 }}>
               {step === "generating" ? "Generating…" : "Generate"}
             </button>
-            <button onClick={reset} style={{ fontSize: 13, color: "#aaa", background: "none", border: "none", cursor: "pointer", textDecoration: "underline" }}>
+            <button onClick={reset} style={{ fontSize: 13, color: "var(--text-dim)", background: "none", border: "none", cursor: "pointer", textDecoration: "underline" }}>
               Start over
             </button>
           </div>
@@ -161,7 +163,7 @@ export function MenuClient() {
             ))}
           </div>
           <button onClick={reset}
-            style={{ alignSelf: "flex-start", padding: "8px 18px", background: "#f0f0f0", color: "#555", border: "none", borderRadius: 6, fontSize: 14, cursor: "pointer" }}>
+            style={{ alignSelf: "flex-start", padding: "8px 18px", background: "var(--surface-hi)", color: "var(--text-secondary)", border: "1px solid var(--border)", borderRadius: 6, fontSize: 14, cursor: "pointer" }}>
             Start over
           </button>
         </div>

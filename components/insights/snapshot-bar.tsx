@@ -23,16 +23,19 @@ interface SnapshotBarProps {
 function Stat({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex flex-col gap-1">
-      <span className="text-xs text-zinc-500">{label}</span>
-      <span className="text-xl font-semibold tabular-nums">{value}</span>
+      <span className="text-xs" style={{ color: "var(--text-secondary)" }}>{label}</span>
+      <span className="text-xl font-semibold tabular-nums" style={{ color: "var(--gold)" }}>{value}</span>
     </div>
   );
 }
 
 export function SnapshotBar({ ig, fb }: SnapshotBarProps) {
   return (
-    <div className="rounded-lg border border-zinc-200 bg-white p-4">
-      <div className="mb-3 text-sm font-medium text-zinc-700">This Week at a Glance</div>
+    <div
+      className="rounded-lg p-4"
+      style={{ border: "1px solid var(--border)", background: "var(--surface)" }}
+    >
+      <div className="mb-3 text-sm font-medium" style={{ color: "var(--text-primary)" }}>This Week at a Glance</div>
       <div className="grid grid-cols-2 gap-6 sm:grid-cols-3 lg:grid-cols-6">
         <Stat label="IG Reach" value={fmt(ig?.reach)} />
         <Stat label="IG Views" value={fmt(ig?.views)} />

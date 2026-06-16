@@ -136,30 +136,36 @@ export function BoardClient({
       <AppHeader userEmail={userEmail} />
       <FilterBar active={filter} onChange={setFilter} onSync={runSync} progress={progress} />
 
-      <div className="flex items-center justify-between px-4 py-2 text-sm text-zinc-500">
+      <div className="flex items-center justify-between px-4 py-2 text-sm" style={{ color: "var(--text-secondary)" }}>
         <span>
           {filtered.length} photos{filter !== "all" ? ` in ${labelFor(filter)}` : ""}
         </span>
         <div className="flex items-center gap-3">
           <UploadButton onComplete={() => { router.refresh(); setView("review"); }} />
-          <Link href="/compose" className="text-zinc-700 underline">New post</Link>
-          <Link href="/create" className="text-zinc-700 underline">Create graphic</Link>
-          <Link href="/posts" className="text-zinc-700 underline">Scheduled</Link>
-          <Link href="/insights" className="text-zinc-700 underline">Insights</Link>
+          <Link href="/compose" className="underline" style={{ color: "var(--text-primary)" }}>New post</Link>
+          <Link href="/create" className="underline" style={{ color: "var(--text-primary)" }}>Create graphic</Link>
+          <Link href="/posts" className="underline" style={{ color: "var(--text-primary)" }}>Scheduled</Link>
+          <Link href="/insights" className="underline" style={{ color: "var(--text-primary)" }}>Insights</Link>
         </div>
       </div>
 
       {/* Tab bar: Board / Review */}
-      <div className="flex items-center gap-1 border-b border-zinc-200 px-4">
+      <div className="flex items-center gap-1 px-4" style={{ borderBottom: "1px solid var(--border)" }}>
         <button
           onClick={() => setView("board")}
-          className={`border-b-2 px-3 py-2 text-sm ${view === "board" ? "border-zinc-900 font-medium text-zinc-900" : "border-transparent text-zinc-500"}`}
+          className="border-b-2 px-3 py-2 text-sm transition-colors"
+          style={view === "board"
+            ? { borderColor: "var(--gold)", fontWeight: 500, color: "var(--gold)" }
+            : { borderColor: "transparent", color: "var(--text-dim)" }}
         >
           Board
         </button>
         <button
           onClick={() => setView("review")}
-          className={`border-b-2 px-3 py-2 text-sm ${view === "review" ? "border-zinc-900 font-medium text-zinc-900" : "border-transparent text-zinc-500"}`}
+          className="border-b-2 px-3 py-2 text-sm transition-colors"
+          style={view === "review"
+            ? { borderColor: "var(--gold)", fontWeight: 500, color: "var(--gold)" }
+            : { borderColor: "transparent", color: "var(--text-dim)" }}
         >
           Review{pendingCount > 0 ? ` (${pendingCount})` : ""}
         </button>
@@ -171,7 +177,10 @@ export function BoardClient({
               <Link
                 key={r.value}
                 href={r.value === "all" ? "/board" : `/board?range=${r.value}`}
-                className={`rounded px-2 py-1 text-xs ${activeRange === r.value ? "bg-zinc-900 text-white" : "text-zinc-500 hover:bg-zinc-100"}`}
+                className="rounded px-2 py-1 text-xs transition-colors"
+                style={activeRange === r.value
+                  ? { background: "var(--gold)", color: "var(--bg)" }
+                  : { color: "var(--text-dim)" }}
               >
                 {r.label}
               </Link>
@@ -195,7 +204,7 @@ export function BoardClient({
       {view === "board" && (
         <>
           {groups.length === 0 ? (
-            <p className="px-4 py-16 text-center text-zinc-400">
+            <p className="px-4 py-16 text-center" style={{ color: "var(--text-dim)" }}>
               No photos yet. Click &quot;Sync &amp; sort&quot; to pull them in from Drive.
             </p>
           ) : (
@@ -225,7 +234,12 @@ export function BoardClient({
             <div className="flex justify-center pb-8">
               <button
                 onClick={() => setVisible((v) => v + PAGE_SIZE)}
-                className="rounded-md border border-zinc-300 px-4 py-2 text-sm"
+                className="rounded-md px-4 py-2 text-sm transition-colors"
+                style={{
+                  border: "1px solid var(--border-hi)",
+                  color: "var(--text-secondary)",
+                  background: "var(--surface)",
+                }}
               >
                 Load more
               </button>

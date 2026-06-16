@@ -29,20 +29,39 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex flex-1 items-center justify-center bg-zinc-50 p-6">
+    <div
+      className="flex flex-1 items-center justify-center p-6"
+      style={{ background: "var(--bg)" }}
+    >
       <form
         onSubmit={handleSubmit}
-        className="w-full max-w-sm space-y-4 rounded-xl border border-zinc-200 bg-white p-8 shadow-sm"
+        className="w-full max-w-sm space-y-4 p-8"
+        style={{
+          background: "var(--surface)",
+          border: "1px solid var(--border)",
+          borderRadius: "var(--radius)",
+          boxShadow: "var(--shadow)",
+        }}
       >
-        <h1 className="text-xl font-semibold text-zinc-900">Photo Triage</h1>
-        <p className="text-sm text-zinc-500">Sign in to continue.</p>
+        <h1
+          className="text-2xl tracking-tight"
+          style={{ fontFamily: "var(--font-serif)", fontWeight: 600, color: "var(--text-primary)" }}
+        >
+          Provenance
+        </h1>
+        <p className="text-sm" style={{ color: "var(--text-secondary)" }}>Sign in to continue.</p>
         <input
           type="email"
           required
           placeholder="Email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm"
+          className="w-full rounded-md px-3 py-2 text-sm"
+          style={{
+            border: "1px solid var(--border-hi)",
+            background: "var(--surface-hi)",
+            color: "var(--text-primary)",
+          }}
         />
         <input
           type="password"
@@ -50,13 +69,19 @@ export default function LoginPage() {
           placeholder="Password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm"
+          className="w-full rounded-md px-3 py-2 text-sm"
+          style={{
+            border: "1px solid var(--border-hi)",
+            background: "var(--surface-hi)",
+            color: "var(--text-primary)",
+          }}
         />
-        {error && <p className="text-sm text-red-600">{error}</p>}
+        {error && <p className="text-sm" style={{ color: "var(--red)" }}>{error}</p>}
         <button
           type="submit"
           disabled={loading}
-          className="w-full rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+          className="w-full rounded-md px-4 py-2 text-sm font-medium transition-colors hover:opacity-90 disabled:opacity-50"
+          style={{ background: "var(--gold)", color: "var(--bg)" }}
         >
           {loading ? "Signing in…" : "Sign in"}
         </button>

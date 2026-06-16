@@ -18,35 +18,40 @@ export function TrendDisplay({ trend }: TrendChartProps) {
   const wow = weekOverWeekChange.ok ? weekOverWeekChange.value : null;
 
   return (
-    <div className="rounded-lg border border-zinc-200 bg-white p-4">
-      <div className="mb-3 text-sm font-medium text-zinc-700">Follower Trend</div>
+    <div
+      className="rounded-lg p-4"
+      style={{ border: "1px solid var(--border)", background: "var(--surface)" }}
+    >
+      <div className="mb-3 text-sm font-medium" style={{ color: "var(--text-primary)" }}>Follower Trend</div>
 
       {/* Week-over-week (available with just 2 weeks) */}
       {wow && (
         <div className="mb-4 flex items-center gap-3">
-          <div className="text-2xl font-semibold tabular-nums">
+          <div className="text-2xl font-semibold tabular-nums" style={{ color: "var(--gold)" }}>
             {wow.delta >= 0 ? "+" : ""}
             {wow.delta.toLocaleString("en-US")}
           </div>
-          <div className="text-sm text-zinc-500">net followers this week vs prior week</div>
+          <div className="text-sm" style={{ color: "var(--text-secondary)" }}>net followers this week vs prior week</div>
         </div>
       )}
 
       {/* Multi-week trend OR building-history state */}
       {netFollowerTrend.ok ? (
         <div>
-          <div className="mb-2 text-xs font-medium text-zinc-500">
+          <div className="mb-2 text-xs font-medium" style={{ color: "var(--text-secondary)" }}>
             {weeksAvailable}-week trend
           </div>
           <div className="flex items-center gap-2">
             <span
-              className={`text-sm font-medium ${
-                netFollowerTrend.value.direction === "up"
-                  ? "text-green-600"
-                  : netFollowerTrend.value.direction === "down"
-                  ? "text-red-500"
-                  : "text-zinc-500"
-              }`}
+              className="text-sm font-medium"
+              style={{
+                color:
+                  netFollowerTrend.value.direction === "up"
+                    ? "var(--green)"
+                    : netFollowerTrend.value.direction === "down"
+                    ? "var(--red)"
+                    : "var(--text-secondary)",
+              }}
             >
               {netFollowerTrend.value.direction === "up"
                 ? "Growing"
@@ -54,7 +59,7 @@ export function TrendDisplay({ trend }: TrendChartProps) {
                 ? "Declining"
                 : "Flat"}
             </span>
-            <span className="text-sm text-zinc-500">
+            <span className="text-sm" style={{ color: "var(--text-secondary)" }}>
               avg. {Math.round(Math.abs(netFollowerTrend.value.avgWeeklyGrowth))} followers/week
             </span>
           </div>
@@ -64,18 +69,27 @@ export function TrendDisplay({ trend }: TrendChartProps) {
               <div
                 key={i}
                 title={`${delta >= 0 ? "+" : ""}${delta}`}
-                className={`h-6 flex-1 rounded-sm ${
-                  delta > 0 ? "bg-green-200" : delta < 0 ? "bg-red-200" : "bg-zinc-100"
-                }`}
+                className="h-6 flex-1 rounded-sm"
+                style={{
+                  background:
+                    delta > 0
+                      ? "var(--green-dim)"
+                      : delta < 0
+                      ? "var(--red-dim)"
+                      : "var(--surface-hi)",
+                }}
               />
             ))}
           </div>
         </div>
       ) : (
-        <div className="rounded-md bg-zinc-50 px-3 py-2">
-          <p className="text-sm text-zinc-500">
+        <div
+          className="rounded-md px-3 py-2"
+          style={{ background: "var(--surface-hi)" }}
+        >
+          <p className="text-sm" style={{ color: "var(--text-secondary)" }}>
             Building history — week{" "}
-            <span className="font-medium">{weeksAvailable}</span> of{" "}
+            <span className="font-medium" style={{ color: "var(--text-primary)" }}>{weeksAvailable}</span> of{" "}
             {MIN_WEEKS_FOR_TREND} needed for trend analysis.
           </p>
         </div>

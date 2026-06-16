@@ -59,7 +59,7 @@ export function EnableNotifications() {
 
   if (state === "unsupported") return null;
   if (state === "on")
-    return <span className="text-xs text-emerald-600">🔔 Reminders on</span>;
+    return <span className="text-xs" style={{ color: "var(--green)" }}>🔔 Reminders on</span>;
 
   const label =
     state === "working" ? "Enabling…" : state === "denied" ? "Blocked in settings" : "🔔 Enable reminders";
@@ -68,7 +68,8 @@ export function EnableNotifications() {
     <button
       onClick={enable}
       disabled={state === "working" || state === "denied"}
-      className="text-xs text-zinc-600 underline disabled:opacity-50"
+      className="text-xs underline disabled:opacity-50"
+      style={{ color: "var(--text-secondary)" }}
     >
       {label}
       {state === "error" && " — try again"}

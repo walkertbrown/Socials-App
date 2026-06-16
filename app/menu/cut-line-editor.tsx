@@ -66,8 +66,8 @@ export function CutLineEditor({ previewSrc, onChange }: CutLineEditorProps) {
       {labels.map(({ midY, label }) => (
         <div
           key={label}
-          style={{ top: `${midY}%`, transform: "translateY(-50%)" }}
-          className="absolute left-2 pointer-events-none text-xs text-red-400 font-semibold bg-white/70 px-1 rounded"
+          style={{ top: `${midY}%`, transform: "translateY(-50%)", color: "var(--red)", background: "rgba(0,0,0,0.55)" }}
+          className="absolute left-2 pointer-events-none text-xs font-semibold px-1 rounded"
         >
           {label}
         </div>

@@ -92,7 +92,7 @@ export function PhotoPicker({ photos, selectedIds, onSelect, matchedIds = null, 
                 }}
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={`/api/thumb/${p.id}`} alt="" loading="lazy" className="h-full w-full object-cover" />
+                <img src={p.thumbnail_url ?? `/api/thumb/${p.id}`} alt="" loading="lazy" className="h-full w-full object-cover" />
                 {p.category === "videos" && (
                   <span className="absolute bottom-1 left-1 rounded bg-black/60 px-1 text-[10px] text-white">
                     ▶

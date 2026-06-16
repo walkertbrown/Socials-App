@@ -31,20 +31,55 @@ export async function getProcessingIds(): Promise<string[]> {
   return (data ?? []).map((r) => r.id as string);
 }
 
+// Columns needed for the board/compose UI — omits heavy fields like `description`
+// that are only needed for intent search (covered by getPhotosForMatching).
+const BOARD_COLUMNS = [
+  "id", "drive_file_id", "drive_name", "display_name", "object_key",
+  "storage_backend", "thumbnail_path", "tags", "category", "status",
+  "duplicate_group_id", "perceptual_hash", "picked", "picked_at", "posted",
+  "text_safe", "drive_placed_at", "created_at",
+].join(", ");
+
 // Optional createdAfter filters by the photos_created_at_idx index (Phase 4 date filter).
-export async function getReadyPhotos(createdAfter?: Date): Promise<Photo[]> {
+// Limit caps the row count — the client paginates at 50, so 300 is plenty.
+export async function getReadyPhotos(createdAfter?: Date, limit = 300): Promise<Photo[]> {
   const supabase = createAdminClient();
   let query = supabase
     .from("photos")
-    .select("*")
+    .select(BOARD_COLUMNS)
     .eq("status", "ready")
     .neq("category", "videos")
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .limit(limit);
   if (createdAfter) {
     query = query.gte("created_at", createdAfter.toISOString());
   }
   const { data } = await query;
-  return (data ?? []) as Photo[];
+  return (data ?? []) as unknown as Photo[];
+}
+
+// Batch-generate signed thumbnail URLs for an array of photos in ONE storage API
+// call instead of one call per photo. Returns a map of thumbnail_path → signedUrl.
+// TTL is 1 hour — long enough to survive a normal session.
+export async function batchSignThumbnails(
+  photos: Photo[]
+): Promise<Map<string, string>> {
+  const paths = photos
+    .map((p) => p.thumbnail_path)
+    .filter((p): p is string => !!p);
+
+  if (paths.length === 0) return new Map();
+
+  const admin = createAdminClient();
+  const { data } = await admin.storage
+    .from("thumbnails")
+    .createSignedUrls(paths, 3600);
+
+  const map = new Map<string, string>();
+  for (const item of data ?? []) {
+    if (item.signedUrl && item.path) map.set(item.path, item.signedUrl);
+  }
+  return map;
 }
 
 // Videos ready to post (the photo reads deliberately exclude these). Used by the

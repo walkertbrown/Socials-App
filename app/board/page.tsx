@@ -1,14 +1,10 @@
 import { redirect } from "next/navigation";
-import { type NextRequest } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { getReadyPhotos, getPendingReview } from "@/lib/db/photos";
+import { getReadyPhotos, getPendingReview, batchSignThumbnails } from "@/lib/db/photos";
 import { BoardClient } from "@/app/board/board-client";
 
-// Always render fresh — the board reflects per-user session + live data.
 export const dynamic = "force-dynamic";
 
-// The ?range= query param drives the date filter. Accepted values:
-// "24h" | "7d" | "30d" | "all" (default: "all")
 function rangeToDate(range: string | null): Date | undefined {
   if (!range || range === "all") return undefined;
   const now = new Date();
@@ -37,10 +33,27 @@ export default async function BoardPage({
     getPendingReview(),
   ]);
 
+  // Batch-sign all thumbnail URLs in one storage API call instead of one per image.
+  // This replaces ~500 serverless invocations with a single request at render time.
+  const [thumbMap, reviewThumbMap] = await Promise.all([
+    batchSignThumbnails(photos),
+    batchSignThumbnails(pendingReview),
+  ]);
+
+  const photosWithUrls = photos.map((p) => ({
+    ...p,
+    thumbnail_url: p.thumbnail_path ? (thumbMap.get(p.thumbnail_path) ?? null) : null,
+  }));
+
+  const reviewWithUrls = pendingReview.map((p) => ({
+    ...p,
+    thumbnail_url: p.thumbnail_path ? (reviewThumbMap.get(p.thumbnail_path) ?? null) : null,
+  }));
+
   return (
     <BoardClient
-      initialPhotos={photos}
-      initialPendingReview={pendingReview}
+      initialPhotos={photosWithUrls}
+      initialPendingReview={reviewWithUrls}
       userEmail={user.email ?? ""}
       activeRange={range ?? "all"}
     />

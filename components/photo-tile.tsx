@@ -73,7 +73,7 @@ export function PhotoTile({
       {/* Main image — tap opens action sheet (via onTap), unless tag editor is open */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
-        src={`/api/thumb/${photo.id}`}
+        src={photo.thumbnail_url ?? `/api/thumb/${photo.id}`}
         alt={visibleName ?? "Venue photo"}
         loading="lazy"
         className="h-full w-full object-cover"

@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { getReadyPhotos, getReadyVideos } from "@/lib/db/photos";
+import { getReadyPhotos, getReadyVideos, batchSignThumbnails } from "@/lib/db/photos";
 import { listGraphics } from "@/lib/db/graphics";
 import { ComposeClient } from "@/app/compose/compose-client";
 
@@ -24,14 +24,20 @@ export default async function ComposePage({
     listGraphics(),
   ]);
 
-  // ?photos=id1,id2,id3 — pre-select photos from the board (single post or carousel)
+  const allPhotos = [...photos, ...videos];
+  const thumbMap = await batchSignThumbnails(allPhotos);
+  const photosWithUrls = allPhotos.map((p) => ({
+    ...p,
+    thumbnail_url: p.thumbnail_path ? (thumbMap.get(p.thumbnail_path) ?? null) : null,
+  }));
+
   const preselectedPhotoIds = params.photos
     ? params.photos.split(",").filter(Boolean)
     : [];
 
   return (
     <ComposeClient
-      photos={[...photos, ...videos]}
+      photos={photosWithUrls}
       graphics={graphics}
       preselectedGraphicId={params.graphicId ?? null}
       preselectedPhotoIds={preselectedPhotoIds}

@@ -140,6 +140,11 @@ export function BoardClient({
     router.push(`/compose?photos=${photo.id}`);
   }
 
+  function sendToGraphic(photo: Photo) {
+    setActionPhoto(null);
+    router.push(`/create?photo=${photo.id}`);
+  }
+
   function startCarousel(photo: Photo) {
     setActionPhoto(null);
     setCarouselIds([photo.id]);
@@ -278,6 +283,11 @@ export function BoardClient({
                 className="w-full rounded-xl py-3.5 text-sm font-semibold"
                 style={{ background: "var(--surface-hi)", color: "var(--text-primary)", border: "1px solid var(--border-hi)" }}>
                 Add to carousel
+              </button>
+              <button onClick={() => sendToGraphic(actionPhoto)}
+                className="w-full rounded-xl py-3.5 text-sm font-semibold"
+                style={{ background: "var(--surface-hi)", color: "var(--text-primary)", border: "1px solid var(--border-hi)" }}>
+                Send to image generator
               </button>
               <button onClick={() => deletePhoto(actionPhoto)}
                 className="w-full rounded-xl py-3.5 text-sm font-semibold"

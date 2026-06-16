@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
   if (!user) return new NextResponse("Unauthorized", { status: 401 });
 
   const body = await request.json();
-  const { prompt, styleHint, size } = body;
+  const { prompt, styleHint, size, forcePhotoId } = body;
 
   if (typeof prompt !== "string" || !prompt.trim()) {
     return NextResponse.json({ error: "prompt is required" }, { status: 400 });
@@ -44,6 +44,11 @@ export async function POST(request: NextRequest) {
       { error: `Could not generate design spec: ${(e as Error).message}` },
       { status: 500 }
     );
+  }
+
+  // If a specific photo was requested, override the AI's choice.
+  if (typeof forcePhotoId === "string" && forcePhotoId) {
+    spec.photoId = forcePhotoId;
   }
 
   // Resolve photo URL if the template needs one.

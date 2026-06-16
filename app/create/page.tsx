@@ -4,10 +4,21 @@ import { CreateClient } from "./create-client";
 
 // Server component: auth-gates the page and passes text-safe photo ids to
 // the client so the AI and the photo-swap control both have the right list.
-export default async function CreatePage() {
+export default async function CreatePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ photo?: string }>;
+}) {
   const user = await requireUser();
+  const params = await searchParams;
 
   const textSafePhotoIds = await getTextSafePhotoIds();
 
-  return <CreateClient textSafePhotoIds={textSafePhotoIds} userEmail={user.email ?? ""} />;
+  return (
+    <CreateClient
+      textSafePhotoIds={textSafePhotoIds}
+      preselectedPhotoId={params.photo ?? null}
+      userEmail={user.email ?? ""}
+    />
+  );
 }

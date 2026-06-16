@@ -18,12 +18,12 @@ import { TweakControls } from "./tweak-controls";
 import { AppHeader } from "@/components/app-header";
 
 interface CreateClientProps {
-  // Ids of text_safe photos — for the photo-swap control and passed to AI.
   textSafePhotoIds: string[];
+  preselectedPhotoId?: string | null;
   userEmail?: string;
 }
 
-export function CreateClient({ textSafePhotoIds, userEmail = "" }: CreateClientProps) {
+export function CreateClient({ textSafePhotoIds, preselectedPhotoId = null, userEmail = "" }: CreateClientProps) {
   const router = useRouter();
   const [prompt, setPrompt] = useState("");
   const [styleHint, setStyleHint] = useState("");
@@ -66,7 +66,7 @@ export function CreateClient({ textSafePhotoIds, userEmail = "" }: CreateClientP
       const res = await fetch("/api/graphics/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt, styleHint, size }),
+        body: JSON.stringify({ prompt, styleHint, size, forcePhotoId: preselectedPhotoId ?? undefined }),
       });
       const d = await res.json();
       if (!res.ok) throw new Error(d.error || "Failed to generate");
@@ -154,6 +154,17 @@ export function CreateClient({ textSafePhotoIds, userEmail = "" }: CreateClientP
           ← Board
         </Link>
       </div>
+
+      {/* Preselected photo indicator */}
+      {preselectedPhotoId && (
+        <div className="flex items-center gap-3 rounded-lg p-3" style={{ background: "var(--gold-dim)", border: "1px solid var(--gold-border)" }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={`/api/thumb/${preselectedPhotoId}`} alt="" className="h-12 w-12 rounded-md object-cover" />
+          <p className="text-sm" style={{ color: "var(--text-primary)" }}>
+            This photo will be used as the background for your graphic.
+          </p>
+        </div>
+      )}
 
       {/* Prompt + size */}
       <section className="flex flex-col gap-3">

@@ -144,8 +144,13 @@ export function CreateClient({ textSafePhotoIds, userEmail = "" }: CreateClientP
       <AppHeader userEmail={userEmail} />
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-5 p-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-lg font-semibold text-[#1c3149]">Create Graphic</h1>
-        <Link href="/board" className="text-sm text-zinc-500 underline">
+        <h1
+          className="text-lg"
+          style={{ fontFamily: "var(--font-serif)", fontWeight: 600, color: "var(--text-primary)" }}
+        >
+          Create Graphic
+        </h1>
+        <Link href="/board" className="text-sm underline" style={{ color: "var(--text-dim)" }}>
           ← Board
         </Link>
       </div>
@@ -153,7 +158,7 @@ export function CreateClient({ textSafePhotoIds, userEmail = "" }: CreateClientP
       {/* Prompt + size */}
       <section className="flex flex-col gap-3">
         <div>
-          <label className="mb-1 block text-sm font-medium text-zinc-700">
+          <label className="mb-1 block text-sm font-medium" style={{ color: "var(--text-secondary)" }}>
             What would you like to create?
           </label>
           <input
@@ -161,18 +166,28 @@ export function CreateClient({ textSafePhotoIds, userEmail = "" }: CreateClientP
             onChange={(e) => setPrompt(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && !generating && generate()}
             placeholder="e.g. happy pride from the Pelican Club, weekly happy hour reminder…"
-            className="w-full rounded-md border border-zinc-300 p-2 text-sm"
+            className="w-full rounded-md p-2 text-sm"
+            style={{
+              border: "1px solid var(--border-hi)",
+              background: "var(--surface-hi)",
+              color: "var(--text-primary)",
+            }}
           />
         </div>
         <div>
-          <label className="mb-1 block text-sm font-medium text-zinc-700">
+          <label className="mb-1 block text-sm font-medium" style={{ color: "var(--text-secondary)" }}>
             Style hint (optional)
           </label>
           <input
             value={styleHint}
             onChange={(e) => setStyleHint(e.target.value)}
             placeholder="e.g. dark moody background, script font, warm and festive…"
-            className="w-full rounded-md border border-zinc-300 p-2 text-sm"
+            className="w-full rounded-md p-2 text-sm"
+            style={{
+              border: "1px solid var(--border-hi)",
+              background: "var(--surface-hi)",
+              color: "var(--text-primary)",
+            }}
           />
         </div>
         <div className="flex items-center gap-3">
@@ -181,9 +196,12 @@ export function CreateClient({ textSafePhotoIds, userEmail = "" }: CreateClientP
               <button
                 key={s}
                 onClick={() => setSize(s)}
-                className={`rounded-full px-4 py-1.5 text-sm ${
-                  size === s ? "bg-[#1c3149] text-[#f3ecdd]" : "bg-zinc-100 text-zinc-600"
-                }`}
+                className="rounded-full px-4 py-1.5 text-sm transition-colors"
+                style={
+                  size === s
+                    ? { background: "var(--gold)", color: "var(--bg)" }
+                    : { background: "var(--surface-hi)", color: "var(--text-secondary)" }
+                }
               >
                 {s === "feed" ? "Feed (1:1)" : "Story (9:16)"}
               </button>
@@ -192,12 +210,13 @@ export function CreateClient({ textSafePhotoIds, userEmail = "" }: CreateClientP
           <button
             onClick={generate}
             disabled={generating || !prompt.trim()}
-            className="ml-auto rounded-md bg-[#1c3149] px-5 py-2 text-sm font-medium text-[#f3ecdd] disabled:opacity-40"
+            className="ml-auto rounded-md px-5 py-2 text-sm font-medium transition-colors hover:opacity-90 disabled:opacity-40"
+            style={{ background: "var(--gold)", color: "var(--bg)" }}
           >
             {generating ? "Generating…" : spec ? "Regenerate" : "Generate"}
           </button>
         </div>
-        {generateError && <p className="text-sm text-red-600">{generateError}</p>}
+        {generateError && <p className="text-sm" style={{ color: "var(--red)" }}>{generateError}</p>}
       </section>
 
       {/* Preview + tweak panel */}
@@ -205,15 +224,15 @@ export function CreateClient({ textSafePhotoIds, userEmail = "" }: CreateClientP
         <div className="flex flex-col gap-5 sm:flex-row">
           {/* Preview */}
           <div className="flex flex-1 flex-col items-center gap-3">
-            <p className="text-xs text-zinc-400">Preview — {spec.size}</p>
+            <p className="text-xs" style={{ color: "var(--text-dim)" }}>Preview — {spec.size}</p>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={`data:image/png;base64,${pngBase64}`}
               alt="Graphic preview"
-              className="w-full rounded-lg shadow-lg"
-              style={{ maxHeight: previewMaxH, objectFit: "contain" }}
+              className="w-full rounded-lg"
+              style={{ maxHeight: previewMaxH, objectFit: "contain", boxShadow: "var(--shadow)" }}
             />
-            {regenError && <p className="text-sm text-red-600">{regenError}</p>}
+            {regenError && <p className="text-sm" style={{ color: "var(--red)" }}>{regenError}</p>}
 
             {/* Save + schedule */}
             <div className="flex w-full flex-col gap-2">
@@ -221,24 +240,26 @@ export function CreateClient({ textSafePhotoIds, userEmail = "" }: CreateClientP
                 <button
                   onClick={save}
                   disabled={saving}
-                  className="w-full rounded-md bg-[#e6b94d] px-4 py-2.5 text-sm font-semibold text-[#1c3149] disabled:opacity-40"
+                  className="w-full rounded-md px-4 py-2.5 text-sm font-semibold transition-colors hover:opacity-90 disabled:opacity-40"
+                  style={{ background: "var(--gold)", color: "var(--bg)" }}
                 >
                   {saving ? "Saving…" : "Save to library"}
                 </button>
               ) : (
                 <div className="flex flex-col gap-2">
-                  <p className="text-center text-sm font-medium text-emerald-700">
+                  <p className="text-center text-sm font-medium" style={{ color: "var(--green)" }}>
                     Saved! Schedule it like any post.
                   </p>
                   <Link
                     href={`/compose?graphicId=${savedId}`}
-                    className="block w-full rounded-md bg-emerald-600 px-4 py-2.5 text-center text-sm font-medium text-white"
+                    className="block w-full rounded-md px-4 py-2.5 text-center text-sm font-medium transition-colors hover:opacity-90"
+                    style={{ background: "var(--green)", color: "#0a2d14" }}
                   >
                     Schedule this graphic →
                   </Link>
                 </div>
               )}
-              {saveError && <p className="text-sm text-red-600">{saveError}</p>}
+              {saveError && <p className="text-sm" style={{ color: "var(--red)" }}>{saveError}</p>}
             </div>
           </div>
 

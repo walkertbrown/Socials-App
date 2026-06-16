@@ -220,24 +220,32 @@ export function ComposeClient({
       <AppHeader userEmail={userEmail} />
       <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-5 p-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-lg font-semibold">New post</h1>
+        <h1
+          className="text-lg"
+          style={{ fontFamily: "var(--font-serif)", fontWeight: 600, color: "var(--text-primary)" }}
+        >
+          New post
+        </h1>
         <div className="flex items-center gap-3 text-sm">
-          <Link href="/create" className="text-zinc-500 underline">Create graphic</Link>
-          <Link href="/board" className="text-zinc-500 underline">← Board</Link>
+          <Link href="/create" className="underline" style={{ color: "var(--text-dim)" }}>Create graphic</Link>
+          <Link href="/board" className="underline" style={{ color: "var(--text-dim)" }}>← Board</Link>
         </div>
       </div>
 
       {/* Media mode: photo/video vs saved graphic */}
       <section>
-        <p className="mb-2 text-sm font-medium text-zinc-700">1. What are you posting?</p>
+        <p className="mb-2 text-sm font-medium" style={{ color: "var(--text-secondary)" }}>1. What are you posting?</p>
         <div className="flex gap-2">
           {(["photo", "graphic"] as const).map((m) => (
             <button
               key={m}
               onClick={() => setMediaMode(m)}
-              className={`rounded-full px-4 py-1.5 text-sm ${
-                mediaMode === m ? "bg-zinc-900 text-white" : "bg-zinc-100 text-zinc-600"
-              }`}
+              className="rounded-full px-4 py-1.5 text-sm transition-colors"
+              style={
+                mediaMode === m
+                  ? { background: "var(--gold)", color: "var(--bg)" }
+                  : { background: "var(--surface-hi)", color: "var(--text-secondary)" }
+              }
             >
               {m === "photo" ? "Photo or Video" : "Saved Graphic"}
             </button>
@@ -248,11 +256,11 @@ export function ComposeClient({
       {/* Graphic picker */}
       {mediaMode === "graphic" && (
         <section>
-          <p className="mb-2 text-sm font-medium text-zinc-700">2. Pick a saved graphic</p>
+          <p className="mb-2 text-sm font-medium" style={{ color: "var(--text-secondary)" }}>2. Pick a saved graphic</p>
           {graphics.length === 0 ? (
-            <p className="text-sm text-zinc-500">
+            <p className="text-sm" style={{ color: "var(--text-dim)" }}>
               No saved graphics yet.{" "}
-              <Link href="/create" className="underline">Create one →</Link>
+              <Link href="/create" className="underline" style={{ color: "var(--gold)" }}>Create one →</Link>
             </p>
           ) : (
             <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
@@ -264,15 +272,19 @@ export function ComposeClient({
                   <button
                     key={g.id}
                     onClick={() => setSelectedGraphicId(g.id)}
-                    className={`relative aspect-square overflow-hidden rounded-md border-2 ${
-                      selectedGraphicId === g.id ? "border-blue-600" : "border-transparent"
-                    }`}
+                    className="relative aspect-square overflow-hidden rounded-md border-2 transition-colors"
+                    style={{
+                      borderColor: selectedGraphicId === g.id ? "var(--gold)" : "transparent",
+                    }}
                   >
                     {sb ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={sb} alt="Graphic" className="h-full w-full object-cover" />
                     ) : (
-                      <div className="flex h-full items-center justify-center bg-zinc-100 text-xs text-zinc-500">
+                      <div
+                        className="flex h-full items-center justify-center text-xs"
+                        style={{ background: "var(--surface-hi)", color: "var(--text-dim)" }}
+                      >
                         Graphic
                       </div>
                     )}
@@ -285,7 +297,7 @@ export function ComposeClient({
             </div>
           )}
           {selectedGraphic && (
-            <p className="mt-1 text-xs text-zinc-500">
+            <p className="mt-1 text-xs" style={{ color: "var(--text-dim)" }}>
               Selected: {selectedGraphic.size} graphic from{" "}
               {new Date(selectedGraphic.created_at).toLocaleDateString()}
             </p>
@@ -298,19 +310,25 @@ export function ComposeClient({
         <>
           {/* Intent search */}
           <section>
-            <p className="mb-2 text-sm font-medium text-zinc-700">2. What do you want to post about?</p>
+            <p className="mb-2 text-sm font-medium" style={{ color: "var(--text-secondary)" }}>2. What do you want to post about?</p>
             <div className="flex gap-2">
               <input
                 value={intent}
                 onChange={(e) => setIntent(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && findPhotos()}
                 placeholder="e.g. a post about the staff, this weekend, the BBQ shrimp…"
-                className="w-full rounded-md border border-zinc-300 p-2 text-sm"
+                className="w-full rounded-md p-2 text-sm"
+                style={{
+                  border: "1px solid var(--border-hi)",
+                  background: "var(--surface-hi)",
+                  color: "var(--text-primary)",
+                }}
               />
               <button
                 onClick={() => findPhotos()}
                 disabled={searching}
-                className="shrink-0 rounded-md bg-zinc-900 px-3 py-1 text-sm text-white disabled:opacity-40"
+                className="shrink-0 rounded-md px-3 py-1 text-sm font-medium transition-colors hover:opacity-90 disabled:opacity-40"
+                style={{ background: "var(--gold)", color: "var(--bg)" }}
               >
                 {searching ? "Finding…" : "Find photos"}
               </button>
@@ -320,21 +338,24 @@ export function ComposeClient({
                 <button
                   key={t}
                   onClick={() => findPhotos(t)}
-                  className="rounded-full bg-zinc-100 px-3 py-1 text-xs capitalize text-zinc-700 hover:bg-zinc-200"
+                  className="rounded-full px-3 py-1 text-xs capitalize transition-colors"
+                  style={{ background: "var(--surface-hi)", color: "var(--text-secondary)" }}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = "var(--gold-dim)")}
+                  onMouseLeave={(e) => (e.currentTarget.style.background = "var(--surface-hi)")}
                 >
                   {t}
                 </button>
               ))}
             </div>
-            <p className="mt-2 text-xs text-zinc-400">Optional — leave blank to browse everything.</p>
+            <p className="mt-2 text-xs" style={{ color: "var(--text-dim)" }}>Optional — leave blank to browse everything.</p>
           </section>
 
           {/* Photo / video picker */}
           <section>
             <div className="mb-2 flex items-center justify-between">
-              <p className="text-sm font-medium text-zinc-700">3. Pick a photo or video</p>
+              <p className="text-sm font-medium" style={{ color: "var(--text-secondary)" }}>3. Pick a photo or video</p>
               {matchedIds !== null && (
-                <button onClick={clearSearch} className="text-xs text-zinc-500 underline">
+                <button onClick={clearSearch} className="text-xs underline" style={{ color: "var(--text-dim)" }}>
                   Showing matches{intent.trim() ? ` for "${intent.trim()}"` : ""} · clear
                 </button>
               )}
@@ -347,7 +368,7 @@ export function ComposeClient({
       {/* Video preview */}
       {isVideo && selected && (
         <section>
-          <p className="mb-2 text-sm font-medium text-zinc-700">Preview</p>
+          <p className="mb-2 text-sm font-medium" style={{ color: "var(--text-secondary)" }}>Preview</p>
           <div className="flex justify-center">
             <video
               key={selected}
@@ -364,14 +385,15 @@ export function ComposeClient({
       {/* Caption — section number is dynamic based on media mode */}
       <section>
         <div className="mb-2 flex items-center justify-between">
-          <p className="text-sm font-medium text-zinc-700">
+          <p className="text-sm font-medium" style={{ color: "var(--text-secondary)" }}>
             {mediaMode === "graphic" ? "2" : "4"}. Caption
           </p>
           {/* Draft with AI only available for photo posts (needs photo context) */}
           <button
             onClick={draft}
             disabled={mediaMode !== "photo" || !selected || drafting}
-            className="rounded-md bg-zinc-900 px-3 py-1 text-sm text-white disabled:opacity-40"
+            className="rounded-md px-3 py-1 text-sm font-medium transition-colors hover:opacity-90 disabled:opacity-40"
+            style={{ background: "var(--gold)", color: "var(--bg)" }}
           >
             {drafting ? "Writing…" : "Draft with AI"}
           </button>
@@ -381,7 +403,12 @@ export function ComposeClient({
           onChange={(e) => setCaption(e.target.value)}
           rows={4}
           placeholder="Write a caption, or click Draft with AI…"
-          className="w-full rounded-md border border-zinc-300 p-2 text-sm"
+          className="w-full rounded-md p-2 text-sm"
+          style={{
+            border: "1px solid var(--border-hi)",
+            background: "var(--surface-hi)",
+            color: "var(--text-primary)",
+          }}
         />
       </section>
 
@@ -398,35 +425,39 @@ export function ComposeClient({
       {/* Video delivery toggle (whole-post, not per-platform) */}
       {isVideo && selected && (
         <section>
-          <p className="mb-2 text-sm font-medium text-zinc-700">Video publish mode</p>
+          <p className="mb-2 text-sm font-medium" style={{ color: "var(--text-secondary)" }}>Video publish mode</p>
           <div className="flex gap-2">
             {(["auto", "reminder"] as const).map((d) => (
               <button
                 key={d}
                 type="button"
                 onClick={() => handleDeliveryChange(d)}
-                className={`rounded-full px-4 py-1.5 text-sm ${
-                  delivery === d ? "bg-blue-600 text-white" : "bg-zinc-100 text-zinc-600"
-                }`}
+                className="rounded-full px-4 py-1.5 text-sm transition-colors"
+                style={
+                  delivery === d
+                    ? { background: "var(--gold)", color: "var(--bg)" }
+                    : { background: "var(--surface-hi)", color: "var(--text-secondary)" }
+                }
               >
                 {d === "auto" ? "Post it for me (Reel)" : "Remind me"}
               </button>
             ))}
           </div>
           {delivery === "reminder" && (
-            <p className="mt-1 text-xs text-zinc-500">
+            <p className="mt-1 text-xs" style={{ color: "var(--text-secondary)" }}>
               We will ping your phone at the scheduled time so you can add trending audio and post it yourself.
             </p>
           )}
         </section>
       )}
 
-      {msg && <p className="text-sm text-red-600">{msg}</p>}
+      {msg && <p className="text-sm" style={{ color: "var(--red)" }}>{msg}</p>}
 
       <button
         onClick={schedule}
         disabled={saving}
-        className="rounded-md bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white disabled:opacity-50"
+        className="rounded-md px-4 py-2.5 text-sm font-medium transition-colors hover:opacity-90 disabled:opacity-50"
+        style={{ background: "var(--green)", color: "#0a2d14" }}
       >
         {saving ? "Scheduling…" : "Schedule"}
       </button>

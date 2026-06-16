@@ -37,17 +37,18 @@ export function TweakControls({
     <div className="flex flex-col gap-5">
       {/* Feed / Story toggle */}
       <div>
-        <p className="mb-2 text-xs font-medium uppercase tracking-wide text-zinc-500">Format</p>
+        <p className="mb-2 text-xs font-medium uppercase tracking-wide" style={{ color: "var(--text-dim)" }}>Format</p>
         <div className="flex gap-2">
           {(["feed", "story"] as const).map((s) => (
             <button
               key={s}
               onClick={() => { if (spec.size !== s) onSizeToggle(); }}
-              className={`rounded-full px-4 py-1.5 text-sm ${
+              className="rounded-full px-4 py-1.5 text-sm transition-colors"
+              style={
                 spec.size === s
-                  ? "bg-[#1c3149] text-[#f3ecdd]"
-                  : "bg-zinc-100 text-zinc-600"
-              }`}
+                  ? { background: "var(--gold)", color: "var(--bg)" }
+                  : { background: "var(--surface-hi)", color: "var(--text-secondary)" }
+              }
             >
               {s === "feed" ? "Feed (1:1)" : "Story (9:16)"}
             </button>
@@ -57,7 +58,7 @@ export function TweakControls({
 
       {/* Text slots */}
       <div>
-        <p className="mb-2 text-xs font-medium uppercase tracking-wide text-zinc-500">Text</p>
+        <p className="mb-2 text-xs font-medium uppercase tracking-wide" style={{ color: "var(--text-dim)" }}>Text</p>
         <div className="flex flex-col gap-3">
           {template.slots.map((slot) => {
             const val = spec.slots[slot.key] ?? "";
@@ -65,15 +66,20 @@ export function TweakControls({
             if (slot.key === "background") return null;
             return (
               <div key={slot.key}>
-                <label className="mb-1 block text-xs text-zinc-600">
+                <label className="mb-1 block text-xs" style={{ color: "var(--text-secondary)" }}>
                   {slot.label}
-                  {slot.required && <span className="ml-1 text-red-500">*</span>}
+                  {slot.required && <span className="ml-1" style={{ color: "var(--red)" }}>*</span>}
                 </label>
                 <input
                   value={val}
                   onChange={(e) => updateSlot(slot.key, e.target.value)}
                   placeholder={slot.required ? "(required)" : "(optional)"}
-                  className="w-full rounded-md border border-zinc-300 p-2 text-sm"
+                  className="w-full rounded-md p-2 text-sm"
+                  style={{
+                    border: "1px solid var(--border-hi)",
+                    background: "var(--surface-hi)",
+                    color: "var(--text-primary)",
+                  }}
                 />
               </div>
             );
@@ -83,7 +89,7 @@ export function TweakControls({
 
       {/* Palette */}
       <div>
-        <p className="mb-2 text-xs font-medium uppercase tracking-wide text-zinc-500">Color palette</p>
+        <p className="mb-2 text-xs font-medium uppercase tracking-wide" style={{ color: "var(--text-dim)" }}>Color palette</p>
         <div className="flex flex-col gap-1.5">
           {template.palettes.map((p) => (
             <label key={p.id} className="flex cursor-pointer items-center gap-2">
@@ -94,7 +100,7 @@ export function TweakControls({
                 checked={spec.paletteId === p.id}
                 onChange={() => onSpecChange({ ...spec, paletteId: p.id })}
               />
-              <span className="text-sm text-zinc-700">{p.label}</span>
+              <span className="text-sm" style={{ color: "var(--text-secondary)" }}>{p.label}</span>
             </label>
           ))}
         </div>
@@ -102,7 +108,7 @@ export function TweakControls({
 
       {/* Font */}
       <div>
-        <p className="mb-2 text-xs font-medium uppercase tracking-wide text-zinc-500">Font</p>
+        <p className="mb-2 text-xs font-medium uppercase tracking-wide" style={{ color: "var(--text-dim)" }}>Font</p>
         <div className="flex flex-col gap-1.5">
           {template.fonts.map((f) => (
             <label key={f.id} className="flex cursor-pointer items-center gap-2">
@@ -113,7 +119,7 @@ export function TweakControls({
                 checked={spec.fontId === f.id}
                 onChange={() => onSpecChange({ ...spec, fontId: f.id })}
               />
-              <span className="text-sm text-zinc-700">{f.label}</span>
+              <span className="text-sm" style={{ color: "var(--text-secondary)" }}>{f.label}</span>
             </label>
           ))}
         </div>
@@ -122,7 +128,7 @@ export function TweakControls({
       {/* Photo swap — only shown for photo-background templates */}
       {template.isPhotoBackground && textSafePhotoIds.length > 0 && (
         <div>
-          <p className="mb-2 text-xs font-medium uppercase tracking-wide text-zinc-500">
+          <p className="mb-2 text-xs font-medium uppercase tracking-wide" style={{ color: "var(--text-dim)" }}>
             Background photo
           </p>
           <select
@@ -130,7 +136,12 @@ export function TweakControls({
             onChange={(e) =>
               onSpecChange({ ...spec, photoId: e.target.value || null })
             }
-            className="w-full rounded-md border border-zinc-300 p-2 text-sm"
+            className="w-full rounded-md p-2 text-sm"
+            style={{
+              border: "1px solid var(--border-hi)",
+              background: "var(--surface-hi)",
+              color: "var(--text-primary)",
+            }}
           >
             <option value="">(none)</option>
             {textSafePhotoIds.map((id) => (
@@ -146,7 +157,12 @@ export function TweakControls({
       <button
         onClick={onRegenerate}
         disabled={regenerating}
-        className="rounded-md border border-[#1c3149] px-4 py-2 text-sm font-medium text-[#1c3149] disabled:opacity-40"
+        className="rounded-md px-4 py-2 text-sm font-medium transition-colors hover:opacity-90 disabled:opacity-40"
+        style={{
+          border: "1px solid var(--gold-border)",
+          color: "var(--gold)",
+          background: "var(--gold-dim)",
+        }}
       >
         {regenerating ? "Re-rendering…" : "Apply changes"}
       </button>

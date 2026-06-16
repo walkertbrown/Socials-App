@@ -30,24 +30,28 @@ export function DashboardClient({ summary, userEmail }: DashboardClientProps) {
 
       <main className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-6 px-4 py-8">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight" style={{ color: "#0f3d3e" }}>
+          <h1
+            className="text-2xl tracking-tight"
+            style={{ fontFamily: "var(--font-serif)", fontWeight: 600, color: "var(--text-primary)" }}
+          >
             Provenance
           </h1>
-          <p className="mt-1 text-sm text-zinc-500">
+          <p className="mt-1 text-sm" style={{ color: "var(--text-secondary)" }}>
             Your social media command center.
           </p>
         </div>
 
-        <nav className="flex gap-1 border-b border-zinc-200">
+        <nav className="flex gap-1" style={{ borderBottom: "1px solid var(--border)" }}>
           {TABS.map(({ id, label }) => (
             <button
               key={id}
               onClick={() => setTab(id)}
-              className={`border-b-2 px-4 py-2 text-sm transition-colors ${
+              className="border-b-2 px-4 py-2 text-sm transition-colors"
+              style={
                 tab === id
-                  ? "border-[#0f3d3e] font-medium text-[#0f3d3e]"
-                  : "border-transparent text-zinc-500 hover:text-zinc-800"
-              }`}
+                  ? { borderColor: "var(--gold)", fontWeight: 500, color: "var(--gold)" }
+                  : { borderColor: "transparent", color: "var(--text-dim)" }
+              }
             >
               {label}
             </button>
@@ -60,8 +64,8 @@ export function DashboardClient({ summary, userEmail }: DashboardClientProps) {
             <div>
               <Link
                 href="/board"
-                className="inline-block rounded-md px-4 py-2 text-sm font-medium text-white transition-colors hover:opacity-90"
-                style={{ backgroundColor: "#0f3d3e" }}
+                className="inline-block rounded-md px-4 py-2 text-sm font-medium transition-colors hover:opacity-90"
+                style={{ background: "var(--gold)", color: "var(--bg)" }}
               >
                 Go to Board
               </Link>
@@ -72,15 +76,18 @@ export function DashboardClient({ summary, userEmail }: DashboardClientProps) {
         {tab === "studio" && <StudioTab />}
 
         {tab === "board" && (
-          <div className="rounded-xl border border-zinc-200 bg-white p-6">
-            <div className="text-sm font-medium text-zinc-700">Photo Board</div>
-            <p className="mt-1 text-xs text-zinc-500">
+          <div
+            className="rounded-xl p-6"
+            style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius)" }}
+          >
+            <div className="text-sm font-medium" style={{ color: "var(--text-primary)" }}>Photo Board</div>
+            <p className="mt-1 text-xs" style={{ color: "var(--text-secondary)" }}>
               Browse and manage your photo library. Pick keepers, add tags, review uploads.
             </p>
             <Link
               href="/board"
-              className="mt-4 inline-block rounded-md px-4 py-2 text-sm font-medium text-white transition-colors hover:opacity-90"
-              style={{ backgroundColor: "#0f3d3e" }}
+              className="mt-4 inline-block rounded-md px-4 py-2 text-sm font-medium transition-colors hover:opacity-90"
+              style={{ background: "var(--gold)", color: "var(--bg)" }}
             >
               Open Board
             </Link>
@@ -88,15 +95,18 @@ export function DashboardClient({ summary, userEmail }: DashboardClientProps) {
         )}
 
         {tab === "insights" && (
-          <div className="rounded-xl border border-zinc-200 bg-white p-6">
-            <div className="text-sm font-medium text-zinc-700">Weekly Insights</div>
-            <p className="mt-1 text-xs text-zinc-500">
+          <div
+            className="rounded-xl p-6"
+            style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius)" }}
+          >
+            <div className="text-sm font-medium" style={{ color: "var(--text-primary)" }}>Weekly Insights</div>
+            <p className="mt-1 text-xs" style={{ color: "var(--text-secondary)" }}>
               Reach, engagement, top posts, and trend analysis — generated every Monday.
             </p>
             <Link
               href="/insights"
-              className="mt-4 inline-block rounded-md px-4 py-2 text-sm font-medium text-white transition-colors hover:opacity-90"
-              style={{ backgroundColor: "#0f3d3e" }}
+              className="mt-4 inline-block rounded-md px-4 py-2 text-sm font-medium transition-colors hover:opacity-90"
+              style={{ background: "var(--gold)", color: "var(--bg)" }}
             >
               View Insights
             </Link>

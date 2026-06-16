@@ -13,10 +13,13 @@ interface AudienceSnapshotProps {
 export function AudienceSnapshot({ demographics }: AudienceSnapshotProps) {
   if (!demographics || (!demographics.topCities.length && !Object.keys(demographics.ageBreakdown).length)) {
     return (
-      <div className="rounded-lg border border-zinc-200 bg-white p-4">
-        <div className="mb-1 text-sm font-medium text-zinc-700">Audience Snapshot</div>
-        <p className="text-xs italic text-zinc-400 mb-2">Instagram only — FB audience data unavailable.</p>
-        <p className="text-sm text-zinc-400">Audience data not yet available.</p>
+      <div
+        className="rounded-lg p-4"
+        style={{ border: "1px solid var(--border)", background: "var(--surface)" }}
+      >
+        <div className="mb-1 text-sm font-medium" style={{ color: "var(--text-primary)" }}>Audience Snapshot</div>
+        <p className="text-xs italic mb-2" style={{ color: "var(--text-dim)" }}>Instagram only — FB audience data unavailable.</p>
+        <p className="text-sm" style={{ color: "var(--text-dim)" }}>Audience data not yet available.</p>
       </div>
     );
   }
@@ -31,23 +34,26 @@ export function AudienceSnapshot({ demographics }: AudienceSnapshotProps) {
   const totalGender = Object.values(genderSplit).reduce((s, v) => s + v, 0);
 
   return (
-    <div className="rounded-lg border border-zinc-200 bg-white p-4">
-      <div className="mb-1 text-sm font-medium text-zinc-700">Audience Snapshot</div>
-      <p className="text-xs italic text-zinc-400 mb-4">Instagram only (lifetime) — FB audience data unavailable.</p>
+    <div
+      className="rounded-lg p-4"
+      style={{ border: "1px solid var(--border)", background: "var(--surface)" }}
+    >
+      <div className="mb-1 text-sm font-medium" style={{ color: "var(--text-primary)" }}>Audience Snapshot</div>
+      <p className="text-xs italic mb-4" style={{ color: "var(--text-dim)" }}>Instagram only (lifetime) — FB audience data unavailable.</p>
 
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
         {/* Top cities */}
         {topCities.length > 0 && (
           <div>
-            <div className="mb-2 text-xs font-medium text-zinc-500">Top Cities</div>
+            <div className="mb-2 text-xs font-medium" style={{ color: "var(--text-secondary)" }}>Top Cities</div>
             <ol className="flex flex-col gap-1">
               {topCities.map(({ city, count }, i) => (
                 <li key={city} className="flex items-center justify-between text-sm">
-                  <span className="text-zinc-700">
-                    <span className="text-zinc-400 mr-1">{i + 1}.</span>
+                  <span style={{ color: "var(--text-primary)" }}>
+                    <span className="mr-1" style={{ color: "var(--text-dim)" }}>{i + 1}.</span>
                     {city}
                   </span>
-                  <span className="tabular-nums text-zinc-500">{count.toLocaleString()}</span>
+                  <span className="tabular-nums" style={{ color: "var(--text-secondary)" }}>{count.toLocaleString()}</span>
                 </li>
               ))}
             </ol>
@@ -57,12 +63,12 @@ export function AudienceSnapshot({ demographics }: AudienceSnapshotProps) {
         {/* Age breakdown */}
         {ageBuckets.length > 0 && (
           <div>
-            <div className="mb-2 text-xs font-medium text-zinc-500">Age Groups</div>
+            <div className="mb-2 text-xs font-medium" style={{ color: "var(--text-secondary)" }}>Age Groups</div>
             <div className="flex flex-col gap-1">
               {ageBuckets.map(([bucket, count]) => (
                 <div key={bucket} className="flex items-center justify-between text-sm">
-                  <span className="text-zinc-700">{bucket}</span>
-                  <span className="tabular-nums text-zinc-500">{count.toLocaleString()}</span>
+                  <span style={{ color: "var(--text-primary)" }}>{bucket}</span>
+                  <span className="tabular-nums" style={{ color: "var(--text-secondary)" }}>{count.toLocaleString()}</span>
                 </div>
               ))}
             </div>
@@ -72,7 +78,7 @@ export function AudienceSnapshot({ demographics }: AudienceSnapshotProps) {
         {/* Gender split */}
         {totalGender > 0 && (
           <div>
-            <div className="mb-2 text-xs font-medium text-zinc-500">Gender Split</div>
+            <div className="mb-2 text-xs font-medium" style={{ color: "var(--text-secondary)" }}>Gender Split</div>
             <div className="flex flex-col gap-1">
               {Object.entries(genderSplit)
                 .sort(([, a], [, b]) => b - a)
@@ -80,8 +86,8 @@ export function AudienceSnapshot({ demographics }: AudienceSnapshotProps) {
                   const pct = totalGender > 0 ? Math.round((count / totalGender) * 100) : 0;
                   return (
                     <div key={gender} className="flex items-center justify-between text-sm">
-                      <span className="text-zinc-700">{gender}</span>
-                      <span className="tabular-nums text-zinc-500">{pct}%</span>
+                      <span style={{ color: "var(--text-primary)" }}>{gender}</span>
+                      <span className="tabular-nums" style={{ color: "var(--text-secondary)" }}>{pct}%</span>
                     </div>
                   );
                 })}

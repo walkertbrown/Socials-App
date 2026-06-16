@@ -22,13 +22,15 @@ export function OutputCard({ base64Png, filename, label }: OutputCardProps) {
       <img
         src={`data:image/png;base64,${base64Png}`}
         alt={label}
-        className="w-full h-auto rounded border border-zinc-200 object-contain max-h-64"
+        className="w-full h-auto rounded object-contain max-h-64"
+        style={{ border: "1px solid var(--border)" }}
       />
-      <p className="text-xs text-zinc-500 text-center">{label}</p>
+      <p className="text-xs text-center" style={{ color: "var(--text-secondary)" }}>{label}</p>
       <button
         type="button"
         onClick={download}
-        className="text-xs px-3 py-1 rounded bg-[#0f3d3e] text-white hover:bg-[#0f3d3e]/80 transition-colors"
+        className="text-xs px-3 py-1 rounded font-medium transition-colors hover:opacity-90"
+        style={{ background: "var(--gold)", color: "var(--bg)" }}
       >
         Download
       </button>

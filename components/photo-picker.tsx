@@ -42,9 +42,12 @@ export function PhotoPicker({ photos, selectedId, onSelect, matchedIds = null }:
             <button
               key={c.key}
               onClick={() => setFilter(c.key)}
-              className={`rounded-full px-3 py-1 text-xs ${
-                filter === c.key ? "bg-zinc-900 text-white" : "bg-zinc-100 text-zinc-700"
-              }`}
+              className="rounded-full px-3 py-1 text-xs transition-colors"
+              style={
+                filter === c.key
+                  ? { background: "var(--gold)", color: "var(--bg)" }
+                  : { background: "var(--surface-hi)", color: "var(--text-secondary)" }
+              }
             >
               {c.label}
             </button>
@@ -53,7 +56,7 @@ export function PhotoPicker({ photos, selectedId, onSelect, matchedIds = null }:
       )}
 
       {matchMode && filtered.length === 0 ? (
-        <p className="py-6 text-center text-sm text-zinc-500">
+        <p className="py-6 text-center text-sm" style={{ color: "var(--text-dim)" }}>
           No matches — clear the search to browse everything.
         </p>
       ) : (
@@ -62,9 +65,10 @@ export function PhotoPicker({ photos, selectedId, onSelect, matchedIds = null }:
             <button
               key={p.id}
               onClick={() => onSelect(p.id)}
-              className={`relative aspect-square overflow-hidden rounded-md border-2 ${
-                selectedId === p.id ? "border-blue-600" : "border-transparent"
-              }`}
+              className="relative aspect-square overflow-hidden rounded-md border-2 transition-colors"
+              style={{
+                borderColor: selectedId === p.id ? "var(--gold)" : "transparent",
+              }}
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={`/api/thumb/${p.id}`} alt="" loading="lazy" className="h-full w-full object-cover" />

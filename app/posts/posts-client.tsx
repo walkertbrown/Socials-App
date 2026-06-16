@@ -31,26 +31,35 @@ export function PostsClient({ initialGroups, userEmail = "" }: { initialGroups: 
       <AppHeader userEmail={userEmail} />
     <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-3 p-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-lg font-semibold">Scheduled posts</h1>
+        <h1
+          className="text-lg"
+          style={{ fontFamily: "var(--font-serif)", fontWeight: 600, color: "var(--text-primary)" }}
+        >
+          Scheduled posts
+        </h1>
         <div className="flex items-center gap-3 text-sm">
           <EnableNotifications />
-          <Link href="/compose" className="rounded-md bg-zinc-900 px-3 py-1 text-white">
+          <Link
+            href="/compose"
+            className="rounded-md px-3 py-1 font-medium transition-colors hover:opacity-90"
+            style={{ background: "var(--gold)", color: "var(--bg)" }}
+          >
             New post
           </Link>
-          <Link href="/create" className="text-zinc-500 underline">
+          <Link href="/create" className="underline" style={{ color: "var(--text-dim)" }}>
             Create graphic
           </Link>
-          <Link href="/insights" className="text-zinc-500 underline">
+          <Link href="/insights" className="underline" style={{ color: "var(--text-dim)" }}>
             Insights
           </Link>
-          <Link href="/board" className="text-zinc-500 underline">
+          <Link href="/board" className="underline" style={{ color: "var(--text-dim)" }}>
             ← Board
           </Link>
         </div>
       </div>
 
       {groups.length === 0 && (
-        <p className="py-16 text-center text-zinc-400">No posts yet. Click "New post."</p>
+        <p className="py-16 text-center" style={{ color: "var(--text-dim)" }}>No posts yet. Click &quot;New post.&quot;</p>
       )}
 
       {groups.map((g) => (

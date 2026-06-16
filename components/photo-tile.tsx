@@ -58,7 +58,10 @@ export function PhotoTile({
   const canDownload = photo.storage_backend === "minio" && !!photo.object_key;
 
   return (
-    <div className="relative aspect-square overflow-hidden rounded-lg border border-zinc-200 bg-zinc-100">
+    <div
+      className="relative aspect-square overflow-hidden rounded-lg"
+      style={{ border: "1px solid var(--border)", background: "var(--surface-hi)" }}
+    >
       {/* Thumbnails are pre-sized; serve them plainly, not through next/image. */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
@@ -85,12 +88,13 @@ export function PhotoTile({
         🏷 {tags.length || "tag"}
       </button>
 
-      {/* The category dropdown IS the correction control. */}
+      {/* The category dropdown IS the correction control. Keep gradient overlay dark so it works in both themes. */}
       <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-2">
         <select
           value={photo.category ?? "unsorted"}
           onChange={(e) => onReclassify(photo, e.target.value)}
-          className="w-full rounded bg-white/95 px-2 py-1 text-sm text-zinc-800"
+          className="w-full rounded px-2 py-1 text-sm"
+          style={{ background: "var(--surface)", color: "var(--text-primary)", border: "none" }}
         >
           {CATEGORIES.map((c) => (
             <option key={c.key} value={c.key}>
@@ -102,19 +106,31 @@ export function PhotoTile({
 
       {/* Tag editor: overlays the thumbnail. */}
       {editing && (
-        <div className="absolute inset-0 flex flex-col bg-white/97 p-2 text-zinc-800">
+        <div
+          className="absolute inset-0 flex flex-col p-2"
+          style={{ background: "var(--surface)", color: "var(--text-primary)" }}
+        >
           <div className="mb-1 flex items-center justify-between">
-            <span className="text-xs font-medium text-zinc-500">Tags</span>
-            <button onClick={() => setEditing(false)} className="text-xs text-zinc-500 underline">
+            <span className="text-xs font-medium" style={{ color: "var(--text-secondary)" }}>Tags</span>
+            <button onClick={() => setEditing(false)} className="text-xs underline" style={{ color: "var(--text-dim)" }}>
               Done
             </button>
           </div>
           <div className="flex flex-1 flex-wrap content-start gap-1 overflow-y-auto">
-            {tags.length === 0 && <span className="text-xs text-zinc-400">No tags yet.</span>}
+            {tags.length === 0 && <span className="text-xs" style={{ color: "var(--text-dim)" }}>No tags yet.</span>}
             {tags.map((t) => (
-              <span key={t} className="flex items-center gap-1 rounded-full bg-zinc-100 px-2 py-0.5 text-xs">
+              <span
+                key={t}
+                className="flex items-center gap-1 rounded-full px-2 py-0.5 text-xs"
+                style={{ background: "var(--surface-hi)", color: "var(--text-primary)" }}
+              >
                 {t}
-                <button onClick={() => removeTag(t)} className="text-zinc-400 hover:text-red-600">
+                <button
+                  onClick={() => removeTag(t)}
+                  style={{ color: "var(--text-dim)" }}
+                  onMouseEnter={(e) => (e.currentTarget.style.color = "var(--red)")}
+                  onMouseLeave={(e) => (e.currentTarget.style.color = "var(--text-dim)")}
+                >
                   ×
                 </button>
               </span>
@@ -126,10 +142,19 @@ export function PhotoTile({
               onChange={(e) => setNewTag(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && addTag()}
               placeholder="Add a name or tag…"
-              className="w-full rounded border border-zinc-300 px-2 py-1 text-xs"
+              className="w-full rounded px-2 py-1 text-xs"
+              style={{
+                border: "1px solid var(--border-hi)",
+                background: "var(--surface-hi)",
+                color: "var(--text-primary)",
+              }}
               autoFocus
             />
-            <button onClick={addTag} className="shrink-0 rounded bg-zinc-900 px-2 py-1 text-xs text-white">
+            <button
+              onClick={addTag}
+              className="shrink-0 rounded px-2 py-1 text-xs font-medium"
+              style={{ background: "var(--gold)", color: "var(--bg)" }}
+            >
               Add
             </button>
           </div>
@@ -147,27 +172,34 @@ export function PhotoTile({
                       if (e.key === "Escape") setRenaming(false);
                     }}
                     placeholder="Photo name…"
-                    className="w-full rounded border border-zinc-300 px-2 py-1 text-xs"
+                    className="w-full rounded px-2 py-1 text-xs"
+                    style={{
+                      border: "1px solid var(--border-hi)",
+                      background: "var(--surface-hi)",
+                      color: "var(--text-primary)",
+                    }}
                     autoFocus
                   />
                   <button
                     onClick={submitRename}
-                    className="shrink-0 rounded bg-zinc-900 px-2 py-1 text-xs text-white"
+                    className="shrink-0 rounded px-2 py-1 text-xs font-medium"
+                    style={{ background: "var(--gold)", color: "var(--bg)" }}
                   >
                     Save
                   </button>
                 </div>
               ) : (
                 <div className="flex items-center gap-1">
-                  <span className="flex-1 truncate text-xs text-zinc-500">
-                    {visibleName ? visibleName : <em className="text-zinc-400">no name</em>}
+                  <span className="flex-1 truncate text-xs" style={{ color: "var(--text-secondary)" }}>
+                    {visibleName ? visibleName : <em style={{ color: "var(--text-dim)" }}>no name</em>}
                   </span>
                   <button
                     onClick={() => {
                       setRenameValue(photo.display_name ?? photo.drive_name ?? "");
                       setRenaming(true);
                     }}
-                    className="shrink-0 text-xs text-zinc-500 underline"
+                    className="shrink-0 text-xs underline"
+                    style={{ color: "var(--text-dim)" }}
                   >
                     Rename
                   </button>
@@ -180,7 +212,8 @@ export function PhotoTile({
           {canDownload && (
             <a
               href={`/api/download/${photo.id}`}
-              className="mt-2 text-center text-xs text-zinc-600 underline"
+              className="mt-2 text-center text-xs underline"
+              style={{ color: "var(--text-secondary)" }}
               download
             >
               Download original
@@ -189,7 +222,7 @@ export function PhotoTile({
 
           {/* Text-safe toggle: marks this photo as safe for graphic text overlay. */}
           {onTextSafeChange && (
-            <label className="mt-2 flex cursor-pointer items-center gap-1.5 text-xs text-zinc-600">
+            <label className="mt-2 flex cursor-pointer items-center gap-1.5 text-xs" style={{ color: "var(--text-secondary)" }}>
               <input
                 type="checkbox"
                 checked={photo.text_safe ?? false}

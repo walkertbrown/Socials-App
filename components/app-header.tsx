@@ -10,12 +10,9 @@ interface AppHeaderProps {
 
 const NAV = [
   { href: "/dashboard", label: "Dashboard" },
+  { href: "/studio", label: "Studio" },
   { href: "/board", label: "Board" },
-  { href: "/posts", label: "Posts" },
-  { href: "/compose", label: "Compose" },
-  { href: "/create", label: "Create" },
   { href: "/insights", label: "Insights" },
-  { href: "/menu", label: "Menu" },
 ];
 
 function SunIcon() {

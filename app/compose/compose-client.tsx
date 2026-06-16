@@ -35,7 +35,7 @@ export function ComposeClient({
   const router = useRouter();
   // When a graphic is selected, we track its id here instead of a photo id.
   const [selectedGraphicId, setSelectedGraphicId] = useState<string | null>(preselectedGraphicId);
-  const [selected, setSelected] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   // If a graphicId was passed from /create, default to "graphic" media mode.
   const [mediaMode, setMediaMode] = useState<"photo" | "graphic">(
@@ -64,17 +64,17 @@ export function ComposeClient({
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
-  const selectedPhoto = photos.find((p) => p.id === selected);
-  const isVideo = selectedPhoto?.category === "videos";
+  const primaryPhoto = photos.find((p) => p.id === selectedIds[0]);
+  const isVideo = primaryPhoto?.category === "videos";
+  const isCarousel = selectedIds.length > 1;
   const selectedGraphic = graphics.find((g) => g.id === selectedGraphicId);
 
-  // When a video is selected, default delivery to auto (Reel); user can override.
-  // We don't auto-flip if they've already chosen — only on fresh selection.
+  // When photos are selected, sync delivery mode. Multi-select = carousel (images only).
   const handleSelect = useCallback(
-    (id: string | null) => {
-      setSelected(id);
-      if (id) {
-        const photo = photos.find((p) => p.id === id);
+    (ids: string[]) => {
+      setSelectedIds(ids);
+      if (ids.length === 1) {
+        const photo = photos.find((p) => p.id === ids[0]);
         const defaultDelivery = photo?.category === "videos" ? "auto" : "auto";
         setDelivery(defaultDelivery);
         setItems((prev) => prev.map((item) => ({ ...item, delivery: defaultDelivery })));
@@ -137,7 +137,7 @@ export function ComposeClient({
       const d = await res.json();
       if (!res.ok) throw new Error(d.error || "Failed");
       setMatchedIds(d.ids ?? []);
-      setSelected(null);
+      setSelectedIds([]);
     } catch {
       setMsg("Couldn't search photos — try again.");
     }
@@ -150,14 +150,14 @@ export function ComposeClient({
   }
 
   async function draft() {
-    if (!selected) return setMsg("Pick a photo first.");
+    if (!selectedIds[0]) return setMsg("Pick a photo first.");
     setDrafting(true);
     setMsg(null);
     try {
       const res = await fetch("/api/posts/draft-caption", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ photoId: selected, intent: intent.trim() || undefined }),
+        body: JSON.stringify({ photoId: selectedIds[0], intent: intent.trim() || undefined }),
       });
       const d = await res.json();
       if (!res.ok) throw new Error(d.error || "Failed");
@@ -175,21 +175,20 @@ export function ComposeClient({
     if (mediaMode === "graphic" && !selectedGraphicId) {
       return setMsg("Pick a saved graphic first.");
     }
-    if (mediaMode === "photo" && !selected) return setMsg("Pick a photo or video first.");
+    if (mediaMode === "photo" && selectedIds.length === 0) return setMsg("Pick a photo or video first.");
     if (!items.length) return setMsg("Pick at least one platform.");
     if (items.some((i) => !i.scheduled_at)) return setMsg("Set a time for each platform.");
     setSaving(true);
     setMsg(null);
     try {
       const postGroupId = crypto.randomUUID();
-      const mediaType = mediaMode === "graphic" ? "graphic" : isVideo ? "video" : "image";
-      const mediaId = mediaMode === "graphic" ? selectedGraphicId! : selected!;
-      // Build one item per platform.
+      const mediaType = mediaMode === "graphic" ? "graphic" : isVideo ? "video" : isCarousel ? "carousel" : "image";
+      const mediaId = mediaMode === "graphic" ? selectedGraphicId! : selectedIds[0];
       const payload = {
         photo_id: mediaId,
+        // For carousels, also send the full ordered array.
+        ...(isCarousel ? { photo_ids: selectedIds } : {}),
         caption,
-        // Send the original AI draft so it can be persisted alongside the final
-        // caption — the diff is the learning signal for future drafts.
         ai_draft: aiDraft ?? undefined,
         media_type: mediaType,
         post_group_id: postGroupId,
@@ -353,26 +352,34 @@ export function ComposeClient({
           {/* Photo / video picker */}
           <section>
             <div className="mb-2 flex items-center justify-between">
-              <p className="text-sm font-medium" style={{ color: "var(--text-secondary)" }}>3. Pick a photo or video</p>
+              <p className="text-sm font-medium" style={{ color: "var(--text-secondary)" }}>
+                3. Pick photo{isCarousel ? `s (${selectedIds.length} selected — carousel)` : " or video"}
+              </p>
               {matchedIds !== null && (
                 <button onClick={clearSearch} className="text-xs underline" style={{ color: "var(--text-dim)" }}>
                   Showing matches{intent.trim() ? ` for "${intent.trim()}"` : ""} · clear
                 </button>
               )}
             </div>
-            <PhotoPicker photos={photos} selectedId={selected} onSelect={handleSelect} matchedIds={matchedIds} />
+            <PhotoPicker
+              photos={photos}
+              selectedIds={selectedIds}
+              onSelect={handleSelect}
+              matchedIds={matchedIds}
+              multi
+            />
           </section>
         </>
       )}
 
       {/* Video preview */}
-      {isVideo && selected && (
+      {isVideo && selectedIds[0] && (
         <section>
           <p className="mb-2 text-sm font-medium" style={{ color: "var(--text-secondary)" }}>Preview</p>
           <div className="flex justify-center">
             <video
-              key={selected}
-              src={`/api/videos/${selected}/download`}
+              key={selectedIds[0]}
+              src={`/api/videos/${selectedIds[0]}/download`}
               controls
               playsInline
               preload="metadata"
@@ -391,7 +398,7 @@ export function ComposeClient({
           {/* Draft with AI only available for photo posts (needs photo context) */}
           <button
             onClick={draft}
-            disabled={mediaMode !== "photo" || !selected || drafting}
+            disabled={mediaMode !== "photo" || selectedIds.length === 0 || drafting}
             className="rounded-md px-3 py-1 text-sm font-medium transition-colors hover:opacity-90 disabled:opacity-40"
             style={{ background: "var(--gold)", color: "var(--bg)" }}
           >
@@ -423,7 +430,7 @@ export function ComposeClient({
       />
 
       {/* Video delivery toggle (whole-post, not per-platform) */}
-      {isVideo && selected && (
+      {isVideo && selectedIds.length === 1 && (
         <section>
           <p className="mb-2 text-sm font-medium" style={{ color: "var(--text-secondary)" }}>Video publish mode</p>
           <div className="flex gap-2">

@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
   if (!user) return new NextResponse("Unauthorized", { status: 401 });
 
   const body = await request.json();
-  const { photo_id, caption, ai_draft, media_type, post_group_id, items } = body;
+  const { photo_id, photo_ids, caption, ai_draft, media_type, post_group_id, items } = body;
 
   if (typeof photo_id !== "string") {
     return NextResponse.json({ error: "photo_id is required" }, { status: 400 });
@@ -35,10 +35,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "At least one platform item is required" }, { status: 400 });
   }
 
-  const resolvedMediaType: "image" | "video" | "graphic" =
-    media_type === "video" ? "video" : media_type === "graphic" ? "graphic" : "image";
+  const resolvedMediaType: "image" | "video" | "graphic" | "carousel" =
+    media_type === "video" ? "video"
+    : media_type === "graphic" ? "graphic"
+    : media_type === "carousel" ? "carousel"
+    : "image";
 
-  // Validate each item.
   for (const item of items) {
     if (typeof item.platform !== "string" || typeof item.scheduled_at !== "string") {
       return NextResponse.json({ error: "Each item needs platform + scheduled_at" }, { status: 400 });
@@ -48,8 +50,9 @@ export async function POST(request: NextRequest) {
   const rows = items.map(
     (item: { platform: string; scheduled_at: string; delivery?: string }) => ({
       photo_id,
+      // photo_ids is set for carousels (ordered array of photo UUIDs).
+      ...(Array.isArray(photo_ids) && photo_ids.length > 1 ? { photo_ids } : {}),
       caption: caption ?? "",
-      // Persist the AI draft alongside the final caption — diff is how we learn.
       ai_draft: typeof ai_draft === "string" ? ai_draft : null,
       platform: item.platform,
       media_type: resolvedMediaType,

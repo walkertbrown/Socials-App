@@ -1,20 +1,9 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
 import { AppHeader } from "@/components/app-header";
 import { OverviewCards } from "@/components/dashboard/overview-cards";
-import { StudioTab } from "@/components/dashboard/studio-tab";
 import type { DashboardSummary } from "@/lib/db/dashboard-summary";
-
-type Tab = "overview" | "studio" | "board" | "insights";
-
-const TABS: { id: Tab; label: string }[] = [
-  { id: "overview", label: "Overview" },
-  { id: "studio", label: "Studio" },
-  { id: "board", label: "Board" },
-  { id: "insights", label: "Insights" },
-];
 
 interface DashboardClientProps {
   summary: DashboardSummary;
@@ -22,13 +11,11 @@ interface DashboardClientProps {
 }
 
 export function DashboardClient({ summary, userEmail }: DashboardClientProps) {
-  const [tab, setTab] = useState<Tab>("overview");
-
   return (
     <div className="flex flex-1 flex-col">
       <AppHeader userEmail={userEmail} />
 
-      <main className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-6 px-4 py-8">
+      <main className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-8 px-4 py-10">
         <div>
           <h1
             className="text-2xl tracking-tight"
@@ -41,77 +28,24 @@ export function DashboardClient({ summary, userEmail }: DashboardClientProps) {
           </p>
         </div>
 
-        <nav className="flex gap-1" style={{ borderBottom: "1px solid var(--border)" }}>
-          {TABS.map(({ id, label }) => (
-            <button
-              key={id}
-              onClick={() => setTab(id)}
-              className="border-b-2 px-4 py-2 text-sm transition-colors"
-              style={
-                tab === id
-                  ? { borderColor: "var(--gold)", fontWeight: 500, color: "var(--gold)" }
-                  : { borderColor: "transparent", color: "var(--text-dim)" }
-              }
-            >
-              {label}
-            </button>
-          ))}
-        </nav>
+        <OverviewCards summary={summary} />
 
-        {tab === "overview" && (
-          <div className="flex flex-col gap-5">
-            <OverviewCards summary={summary} />
-            <div>
-              <Link
-                href="/board"
-                className="inline-block rounded-md px-4 py-2 text-sm font-medium transition-colors hover:opacity-90"
-                style={{ background: "var(--gold)", color: "var(--bg)" }}
-              >
-                Go to Board
-              </Link>
-            </div>
-          </div>
-        )}
-
-        {tab === "studio" && <StudioTab />}
-
-        {tab === "board" && (
-          <div
-            className="rounded-xl p-6"
-            style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius)" }}
+        <div className="flex flex-wrap gap-3">
+          <Link
+            href="/studio"
+            className="rounded-md px-4 py-2 text-sm font-medium hover:opacity-90 transition-colors"
+            style={{ background: "var(--gold)", color: "var(--bg)" }}
           >
-            <div className="text-sm font-medium" style={{ color: "var(--text-primary)" }}>Photo Board</div>
-            <p className="mt-1 text-xs" style={{ color: "var(--text-secondary)" }}>
-              Browse and manage your photo library. Pick keepers, add tags, review uploads.
-            </p>
-            <Link
-              href="/board"
-              className="mt-4 inline-block rounded-md px-4 py-2 text-sm font-medium transition-colors hover:opacity-90"
-              style={{ background: "var(--gold)", color: "var(--bg)" }}
-            >
-              Open Board
-            </Link>
-          </div>
-        )}
-
-        {tab === "insights" && (
-          <div
-            className="rounded-xl p-6"
-            style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius)" }}
+            Go to Studio
+          </Link>
+          <Link
+            href="/board"
+            className="rounded-md px-4 py-2 text-sm font-medium hover:opacity-90 transition-colors"
+            style={{ background: "var(--surface-hi)", color: "var(--text-primary)", border: "1px solid var(--border)" }}
           >
-            <div className="text-sm font-medium" style={{ color: "var(--text-primary)" }}>Weekly Insights</div>
-            <p className="mt-1 text-xs" style={{ color: "var(--text-secondary)" }}>
-              Reach, engagement, top posts, and trend analysis — generated every Monday.
-            </p>
-            <Link
-              href="/insights"
-              className="mt-4 inline-block rounded-md px-4 py-2 text-sm font-medium transition-colors hover:opacity-90"
-              style={{ background: "var(--gold)", color: "var(--bg)" }}
-            >
-              View Insights
-            </Link>
-          </div>
-        )}
+            Go to Board
+          </Link>
+        </div>
       </main>
     </div>
   );

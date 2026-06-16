@@ -10,6 +10,7 @@ interface Props {
   onUpdateTags: (photo: Photo, tags: string[]) => void;
   onRename?: (photo: Photo, name: string) => void;
   onTextSafeChange?: (photo: Photo, textSafe: boolean) => void;
+  onDelete?: (photo: Photo) => void;
   extraCount?: number;
   onExpand?: () => void;
 }
@@ -20,9 +21,11 @@ export function PhotoTile({
   onUpdateTags,
   onRename,
   onTextSafeChange,
+  onDelete,
   extraCount,
   onExpand,
 }: Props) {
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const [editing, setEditing] = useState(false);
   const [newTag, setNewTag] = useState("");
   // Inline rename state: show the current display_name or fall back to drive_name.
@@ -230,6 +233,38 @@ export function PhotoTile({
               />
               Safe for text overlay (graphic backgrounds)
             </label>
+          )}
+
+          {/* Delete photo */}
+          {onDelete && (
+            <div className="mt-2 border-t pt-2" style={{ borderColor: "var(--border-hi)" }}>
+              {confirmDelete ? (
+                <div className="flex gap-1">
+                  <button
+                    onClick={() => onDelete(photo)}
+                    className="flex-1 rounded px-2 py-1 text-xs font-medium"
+                    style={{ background: "var(--red)", color: "#fff" }}
+                  >
+                    Delete
+                  </button>
+                  <button
+                    onClick={() => setConfirmDelete(false)}
+                    className="rounded px-2 py-1 text-xs"
+                    style={{ background: "var(--surface-hi)", color: "var(--text-secondary)" }}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setConfirmDelete(true)}
+                  className="text-xs underline"
+                  style={{ color: "var(--text-dim)" }}
+                >
+                  Delete photo
+                </button>
+              )}
+            </div>
           )}
         </div>
       )}

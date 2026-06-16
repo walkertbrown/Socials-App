@@ -113,6 +113,12 @@ export function BoardClient({
     }
   }, []);
 
+  // Hard-delete a photo: remove from local state immediately, call API.
+  const deletePhoto = useCallback(async (photo: Photo) => {
+    setPhotos((prev) => prev.filter((p) => p.id !== photo.id));
+    await fetch(`/api/photos/${photo.id}`, { method: "DELETE" }).catch(() => null);
+  }, []);
+
   // Inline rename: optimistically updates display_name; reverts on failure.
   const renamePhoto = useCallback(async (photo: Photo, name: string) => {
     const prev = photo.display_name;
@@ -222,6 +228,7 @@ export function BoardClient({
                     onUpdateTags={updateTags}
                     onRename={renamePhoto}
                     onTextSafeChange={updateTextSafe}
+                    onDelete={deletePhoto}
                     extraCount={!isOpen && idx === 0 && group.length > 1 ? group.length - 1 : undefined}
                     onExpand={() => setExpanded((s) => new Set(s).add(key))}
                   />

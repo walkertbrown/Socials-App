@@ -10,7 +10,7 @@ export interface ScheduledPost {
   post_group_id: string | null;
   // 'graphic' is a third media type for in-app generated graphics (photo_id is a
   // graphics table id; the PNG is already in the 'graphics' bucket).
-  media_type: "image" | "video" | "graphic";
+  media_type: "image" | "video" | "graphic" | "carousel";
   scheduled_at: string;
   // 'auto' = app publishes it (photos + Reels + graphics). 'reminder' = app pings her phone.
   delivery: "auto" | "reminder";
@@ -74,12 +74,12 @@ export async function createPost(input: {
 export async function createPostGroup(
   rows: Array<{
     photo_id: string;
+    photo_ids?: string[];
     caption: string;
     platform: string;
-    media_type: "image" | "video" | "graphic";
+    media_type: "image" | "video" | "graphic" | "carousel";
     scheduled_at: string;
     delivery: "auto" | "reminder";
-    // The raw AI draft before she edited it — diff source for the learning loop.
     ai_draft?: string | null;
   }>,
   postGroupId: string

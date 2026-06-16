@@ -8,6 +8,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { WeeklyReport } from "@/lib/db/weekly-reports";
+import { AppHeader } from "@/components/app-header";
 import type { WeekPayload } from "@/lib/report/compute-week";
 import type { DemographicsSnapshot } from "@/lib/meta/demographics";
 import { SnapshotBar } from "@/components/insights/snapshot-bar";
@@ -18,9 +19,10 @@ import { TrendDisplay } from "@/components/insights/trend-chart";
 interface InsightsClientProps {
   report: WeeklyReport | null;
   availableWeeks: string[];
+  userEmail?: string;
 }
 
-export function InsightsClient({ report, availableWeeks }: InsightsClientProps) {
+export function InsightsClient({ report, availableWeeks, userEmail = "" }: InsightsClientProps) {
   const router = useRouter();
   const [selectedWeek, setSelectedWeek] = useState(report?.week_start ?? "");
   const [isRegenerating, setIsRegenerating] = useState(false);
@@ -64,6 +66,8 @@ export function InsightsClient({ report, availableWeeks }: InsightsClientProps) 
   // ── Empty state ─────────────────────────────────────────────────────────────
   if (!report || !payload) {
     return (
+      <div className="flex flex-1 flex-col">
+        <AppHeader userEmail={userEmail} />
       <div className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-4 p-4">
         <Header availableWeeks={availableWeeks} selectedWeek={selectedWeek} onWeekChange={handleWeekChange} />
         <div className="flex flex-1 flex-col items-center justify-center py-24 text-center">
@@ -76,6 +80,7 @@ export function InsightsClient({ report, availableWeeks }: InsightsClientProps) 
           </p>
         </div>
       </div>
+      </div>
     );
   }
 
@@ -84,6 +89,8 @@ export function InsightsClient({ report, availableWeeks }: InsightsClientProps) 
   const demographics = igSnap?.demographics as DemographicsSnapshot | null;
 
   return (
+    <div className="flex flex-1 flex-col">
+      <AppHeader userEmail={userEmail} />
     <div className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-4 p-4">
       <Header
         availableWeeks={availableWeeks}
@@ -131,6 +138,7 @@ export function InsightsClient({ report, availableWeeks }: InsightsClientProps) 
       <div className="rounded-lg border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-600">
         Goal tracked: <span className="font-medium">{payload.goal}</span>
       </div>
+    </div>
     </div>
   );
 }

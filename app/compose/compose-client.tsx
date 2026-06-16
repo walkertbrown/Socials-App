@@ -3,6 +3,7 @@
 import { useState, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { AppHeader } from "@/components/app-header";
 import type { Photo, Graphic } from "@/lib/types";
 import { PhotoPicker } from "@/components/photo-picker";
 import { PlatformSchedule, type PlatformItem } from "@/components/platform-schedule";
@@ -24,10 +25,12 @@ export function ComposeClient({
   photos,
   graphics = [],
   preselectedGraphicId = null,
+  userEmail = "",
 }: {
   photos: Photo[];
   graphics?: Graphic[];
   preselectedGraphicId?: string | null;
+  userEmail?: string;
 }) {
   const router = useRouter();
   // When a graphic is selected, we track its id here instead of a photo id.
@@ -213,7 +216,9 @@ export function ComposeClient({
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-5 p-4">
+    <div className="flex flex-1 flex-col">
+      <AppHeader userEmail={userEmail} />
+      <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-5 p-4">
       <div className="flex items-center justify-between">
         <h1 className="text-lg font-semibold">New post</h1>
         <div className="flex items-center gap-3 text-sm">
@@ -425,6 +430,7 @@ export function ComposeClient({
       >
         {saving ? "Scheduling…" : "Schedule"}
       </button>
+    </div>
     </div>
   );
 }

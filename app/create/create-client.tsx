@@ -15,13 +15,15 @@ import Link from "next/link";
 import type { DesignSpec } from "@/lib/graphics/templates/types";
 import { TEMPLATE_REGISTRY } from "@/lib/graphics/templates/registry";
 import { TweakControls } from "./tweak-controls";
+import { AppHeader } from "@/components/app-header";
 
 interface CreateClientProps {
   // Ids of text_safe photos — for the photo-swap control and passed to AI.
   textSafePhotoIds: string[];
+  userEmail?: string;
 }
 
-export function CreateClient({ textSafePhotoIds }: CreateClientProps) {
+export function CreateClient({ textSafePhotoIds, userEmail = "" }: CreateClientProps) {
   const router = useRouter();
   const [prompt, setPrompt] = useState("");
   const [styleHint, setStyleHint] = useState("");
@@ -138,8 +140,9 @@ export function CreateClient({ textSafePhotoIds }: CreateClientProps) {
   const previewMaxH = isPortrait ? "60vh" : "auto";
 
   return (
+    <div className="flex flex-1 flex-col">
+      <AppHeader userEmail={userEmail} />
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-5 p-4">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <h1 className="text-lg font-semibold text-[#1c3149]">Create Graphic</h1>
         <Link href="/board" className="text-sm text-zinc-500 underline">
@@ -253,6 +256,7 @@ export function CreateClient({ textSafePhotoIds }: CreateClientProps) {
           </div>
         </div>
       )}
+    </div>
     </div>
   );
 }

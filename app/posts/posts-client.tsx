@@ -7,8 +7,9 @@ import type { PostGroup } from "@/lib/db/post-groups";
 import { utcToCentral } from "@/lib/time";
 import { EnableNotifications } from "@/components/enable-notifications";
 import { PostGroupCard } from "@/components/post-group-card";
+import { AppHeader } from "@/components/app-header";
 
-export function PostsClient({ initialGroups }: { initialGroups: PostGroup[] }) {
+export function PostsClient({ initialGroups, userEmail = "" }: { initialGroups: PostGroup[]; userEmail?: string }) {
   const router = useRouter();
   const [groups, setGroups] = useState(initialGroups);
   useEffect(() => setGroups(initialGroups), [initialGroups]);
@@ -26,6 +27,8 @@ export function PostsClient({ initialGroups }: { initialGroups: PostGroup[] }) {
   );
 
   return (
+    <div className="flex flex-1 flex-col">
+      <AppHeader userEmail={userEmail} />
     <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-3 p-4">
       <div className="flex items-center justify-between">
         <h1 className="text-lg font-semibold">Scheduled posts</h1>
@@ -53,6 +56,7 @@ export function PostsClient({ initialGroups }: { initialGroups: PostGroup[] }) {
       {groups.map((g) => (
         <PostGroupCard key={g.post_group_id} group={g} onAct={act} />
       ))}
+    </div>
     </div>
   );
 }

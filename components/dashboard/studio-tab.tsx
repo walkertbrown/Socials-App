@@ -16,6 +16,11 @@ const LAUNCHERS = [
     title: "Scheduled",
     description: "Review, retry, or cancel posts in the queue.",
   },
+  {
+    href: "/menu",
+    title: "Menu Maker",
+    description: "PDF menu to Google PNG + Instagram squares.",
+  },
 ];
 
 export function StudioTab() {

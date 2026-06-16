@@ -1,16 +1,15 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { Readable } from "stream";
 import { getUserOrNull } from "@/lib/auth/require-user";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { createDriveClient } from "@/lib/drive/client";
+import { getSignedDownloadUrl } from "@/lib/storage/objects";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
-// Streams a video from Drive (as the owner, so her Google login doesn't matter).
-// Default = inline, for playing in a <video> element; ?download=1 = attachment,
-// for the "Save video" button. Forwards Range requests so playback seeks smoothly
-// and only the needed bytes are pulled. [id] is the video's photo-row id.
+// Auth-gated video URL. Builds a short-lived presigned MinIO URL and redirects
+// the browser there so the app server never buffers the original bytes.
+// Default = inline (for playing in a <video> element); ?download=1 = attachment.
+// [id] is the video's photo-row id.
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const user = await getUserOrNull();
   if (!user) return new NextResponse("Unauthorized", { status: 401 });
@@ -19,35 +18,23 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   const sb = createAdminClient();
   const { data: row } = await sb
     .from("photos")
-    .select("drive_file_id, drive_name, category")
+    .select("object_key, display_name, drive_name, category")
     .eq("id", id)
     .maybeSingle();
   if (!row || row.category !== "videos") return new NextResponse("Not found", { status: 404 });
-
-  const drive = createDriveClient();
-  const meta = await drive.files.get({
-    fileId: row.drive_file_id,
-    fields: "mimeType, name",
-    supportsAllDrives: true,
-  });
-
-  // Forward the browser's Range header to Drive so video scrubbing works.
-  const range = request.headers.get("range");
-  const res = await drive.files.get(
-    { fileId: row.drive_file_id, alt: "media", supportsAllDrives: true },
-    { responseType: "stream", headers: range ? { Range: range } : undefined }
-  );
-  const dh = res.headers as Record<string, string | undefined>;
+  if (!row.object_key) return new NextResponse("No object key for this video", { status: 400 });
 
   const wantsDownload = request.nextUrl.searchParams.get("download") === "1";
-  const filename = (row.drive_name || meta.data.name || "video.mp4").replace(/"/g, "");
-  const headers = new Headers();
-  headers.set("Content-Type", meta.data.mimeType || "video/mp4");
-  headers.set("Accept-Ranges", "bytes");
-  if (dh["content-length"]) headers.set("Content-Length", dh["content-length"]!);
-  if (dh["content-range"]) headers.set("Content-Range", dh["content-range"]!);
-  headers.set("Content-Disposition", wantsDownload ? `attachment; filename="${filename}"` : "inline");
+  const filename = wantsDownload
+    ? (row.display_name || row.drive_name || row.object_key.split("/").pop() || "video.mp4").replace(/"/g, "")
+    : undefined;
 
-  const body = Readable.toWeb(res.data as Readable) as ReadableStream;
-  return new NextResponse(body, { status: res.status === 206 ? 206 : 200, headers });
+  try {
+    // inline=true omits attachment disposition so the browser can play the video;
+    // inline=false + filename lets the browser save it with the right name.
+    const url = await getSignedDownloadUrl(row.object_key, 600, filename, !wantsDownload);
+    return NextResponse.redirect(url);
+  } catch {
+    return new NextResponse("Could not generate video URL.", { status: 500 });
+  }
 }

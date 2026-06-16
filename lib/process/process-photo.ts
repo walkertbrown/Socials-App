@@ -1,7 +1,6 @@
 import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getOriginal } from "@/lib/storage/index";
-import { getMimeType } from "@/lib/drive/fetch-file";
 import { createThumbnail, storeThumbnail } from "@/lib/process/make-thumbnail";
 import { hashAndGroup } from "@/lib/process/perceptual-hash";
 import { analyzePhoto } from "@/lib/process/vision-tag";
@@ -34,15 +33,8 @@ export async function processOnePhoto(photoId: string): Promise<ProcessResult> {
     return { id: photoId, status: "ready", skipped: true };
   }
 
-  // Determine mime type. For MinIO photos we can't do a cheap metadata call the way
-  // we could with Drive, so we infer from the object key. For legacy Drive rows we
-  // still use the Drive getMimeType call so we don't break anything in the old path.
-  let mimeType = "";
-  if (photo.storage_backend === "minio" || !photo.drive_file_id) {
-    mimeType = mimeFromKey(photo.object_key ?? "");
-  } else {
-    mimeType = await getMimeType(photo.drive_file_id);
-  }
+  // Infer mime type from the object key extension. All rows are MinIO-backed.
+  const mimeType = mimeFromKey(photo.object_key ?? "");
 
   // Videos: extract one preview frame, describe it, then mark ready.
   // No file move — category lives in the DB.
@@ -51,10 +43,9 @@ export async function processOnePhoto(photoId: string): Promise<ProcessResult> {
     let description: string | null = null;
     let tags: string[] = ["videos"];
     try {
-      // makeVideoThumbnail currently streams from Drive. For MinIO videos it will
-      // fall back to an error (caught below) until that function is updated.
-      // The catch means videos are still marked ready; they just won't have a thumb.
-      const frameKey = photo.object_key ?? photo.drive_file_id ?? "";
+      // makeVideoThumbnail presigns the MinIO object and has ffmpeg range-read it,
+      // so we never buffer the whole file. Non-fatal: missing frame shows no thumb.
+      const frameKey = photo.object_key ?? "";
       const { path, frame } = await makeVideoThumbnail(frameKey);
       thumbnailPath = path;
       const analysis = await analyzePhoto(frame);

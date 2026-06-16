@@ -12,7 +12,7 @@ import { publishToInstagram } from "@/lib/meta/publish-instagram";
 // Each row has a single platform — this dispatches to the right publisher.
 //
 // Media routing:
-//   media_type='image'   → fetch from Drive, convert to JPEG, stage, publish, cleanup.
+//   media_type='image'   → fetch from MinIO, convert to JPEG, stage, publish, cleanup.
 //   media_type='graphic' → graphic is already in the public 'graphics' bucket; just
 //                          get the public URL (no staging copy, no cleanup needed).
 export async function publishPost(post: ScheduledPost): Promise<void> {
@@ -28,14 +28,14 @@ export async function publishPost(post: ScheduledPost): Promise<void> {
     return;
   }
 
-  // Standard image path — unchanged from before this feature.
+  // Standard image path — reads the original from MinIO.
   const sb = createAdminClient();
   const { data: photo } = await sb
     .from("photos")
-    .select("drive_file_id")
+    .select("object_key")
     .eq("id", post.photo_id)
     .maybeSingle();
-  if (!photo?.drive_file_id) {
+  if (!photo?.object_key) {
     await recordFailure(post.id, post.attempts, "The photo for this post could not be found");
     return;
   }
@@ -43,7 +43,7 @@ export async function publishPost(post: ScheduledPost): Promise<void> {
   let staged: { url: string; path: string } | null = null;
   try {
     const creds = await requireCredentials();
-    staged = await stageImage(photo.drive_file_id);
+    staged = await stageImage(photo.object_key);
 
     let fbId: string | null = null;
     let igId: string | null = null;

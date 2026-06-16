@@ -1,19 +1,20 @@
 import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { fetchDriveFile } from "@/lib/drive/fetch-file";
+import { getObjectBytes } from "@/lib/storage/objects";
 import { toPostJpeg } from "@/lib/process/make-thumbnail";
 
 const BUCKET = "post-images";
 const GRAPHICS_BUCKET = "graphics";
 
-// Pulls the full-res original from Drive, converts it to a clean JPEG, and puts
+// Pulls the full-res original from MinIO, converts it to a clean JPEG, and puts
 // it in the PUBLIC bucket so Meta can fetch it. Returns { url, path }; the caller
 // MUST delete `path` afterward (see cleanup-image).
-export async function stageImage(driveFileId: string): Promise<{ url: string; path: string }> {
-  const original = await fetchDriveFile(driveFileId);
+export async function stageImage(objectKey: string): Promise<{ url: string; path: string }> {
+  const original = await getObjectBytes(objectKey);
   const jpeg = await toPostJpeg(original);
 
-  const path = `${driveFileId}-${Date.now()}.jpg`;
+  // Use a timestamp-suffixed key so concurrent posts never collide.
+  const path = `${objectKey.replace(/\//g, "-")}-${Date.now()}.jpg`;
   const sb = createAdminClient();
   const { error } = await sb.storage
     .from(BUCKET)

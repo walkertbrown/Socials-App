@@ -2,29 +2,6 @@ import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { Photo } from "@/lib/types";
 
-// Insert placeholder rows for files we haven't seen before. The unique
-// constraint on drive_file_id makes this idempotent: re-syncing the same
-// folder inserts nothing for already-known photos. Returns the new count.
-// (Legacy path — used if Drive sync is still active.)
-export async function insertPlaceholders(
-  files: { id: string; name: string }[]
-): Promise<number> {
-  if (files.length === 0) return 0;
-  const supabase = createAdminClient();
-  const rows = files.map((f) => ({
-    drive_file_id: f.id,
-    drive_name: f.name,
-    storage_backend: "drive",
-    status: "processing" as const,
-  }));
-  const { data, error } = await supabase
-    .from("photos")
-    .upsert(rows, { onConflict: "drive_file_id", ignoreDuplicates: true })
-    .select("id");
-  if (error) throw new Error(error.message);
-  return data?.length ?? 0;
-}
-
 // Insert placeholder rows for MinIO objects. Keyed on object_key (the unique MinIO
 // path) so idempotency works without Drive ids. Returns the count of new rows only.
 export async function insertMinioPlaceholders(

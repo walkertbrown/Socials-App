@@ -3,7 +3,7 @@ import { spawn } from "child_process";
 import fs from "fs/promises";
 import os from "os";
 import path from "path";
-import { getDriveAccessToken, driveMediaUrl } from "@/lib/drive/download-url";
+import { getSignedDownloadUrl } from "@/lib/storage/objects";
 import { storeThumbnail } from "@/lib/process/make-thumbnail";
 
 function run(cmd: string, args: string[]): Promise<void> {
@@ -16,17 +16,18 @@ function run(cmd: string, args: string[]): Promise<void> {
   });
 }
 
-// Grab ONE representative still frame from a Drive video WITHOUT downloading the
-// whole file: ffmpeg reads the video over HTTP (range requests) and seeks ~1s in.
-// Returns the JPEG frame so the caller can also describe it without re-extracting.
-export async function extractVideoFrame(driveFileId: string): Promise<Buffer> {
-  const token = await getDriveAccessToken();
-  const url = driveMediaUrl(driveFileId);
+// Grab ONE representative still frame from a MinIO video WITHOUT downloading the
+// whole file: ffmpeg reads the video over HTTP (range requests via presigned URL)
+// and seeks ~1s in. Returns the JPEG frame so the caller can also describe it
+// without re-extracting.
+export async function extractVideoFrame(objectKey: string): Promise<Buffer> {
+  // Presigned URL lets ffmpeg range-read without needing auth headers.
+  // TTL of 5 minutes is more than enough for ffmpeg to grab a single frame.
+  const url = await getSignedDownloadUrl(objectKey, 300, undefined, true);
   const tmp = await fs.mkdtemp(path.join(os.tmpdir(), "vthumb-"));
   const out = path.join(tmp, "frame.jpg");
   try {
     await run(process.env.FFMPEG_PATH || "ffmpeg", [
-      "-headers", `Authorization: Bearer ${token}\r\n`,
       "-ss", "1", // seek ~1s in for a non-black frame (input seek = minimal bytes read)
       "-i", url,
       "-frames:v", "1",
@@ -42,9 +43,9 @@ export async function extractVideoFrame(driveFileId: string): Promise<Buffer> {
 // Extract a frame and store it as the video's thumbnail. Returns the stored path
 // and the frame buffer (for describing/tagging in the same pass).
 export async function makeVideoThumbnail(
-  driveFileId: string
+  objectKey: string
 ): Promise<{ path: string; frame: Buffer }> {
-  const frame = await extractVideoFrame(driveFileId);
-  const path = await storeThumbnail(driveFileId, frame);
+  const frame = await extractVideoFrame(objectKey);
+  const path = await storeThumbnail(objectKey, frame);
   return { path, frame };
 }

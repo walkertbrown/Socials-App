@@ -38,10 +38,10 @@ export async function startVideoPublish(post: ScheduledPost): Promise<void> {
   const sb = createAdminClient();
   const { data: photo } = await sb
     .from("photos")
-    .select("drive_file_id")
+    .select("object_key")
     .eq("id", post.photo_id)
     .maybeSingle();
-  if (!photo?.drive_file_id) {
+  if (!photo?.object_key) {
     await recordFailure(post.id, post.attempts, "The video for this post could not be found");
     return;
   }
@@ -49,7 +49,7 @@ export async function startVideoPublish(post: ScheduledPost): Promise<void> {
   let stagedPath: string | null = null;
   try {
     const creds = await requireCredentials();
-    const staged = await stageVideo(photo.drive_file_id);
+    const staged = await stageVideo(photo.object_key);
     stagedPath = staged.path;
     // Persist staged path immediately so recovery can clean it up if we crash.
     await setStagedPath(post.id, staged.path);

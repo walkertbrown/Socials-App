@@ -29,17 +29,22 @@ export async function getObjectBytes(key: string): Promise<Buffer> {
   return Buffer.concat(chunks);
 }
 
-// A short-lived presigned URL. Used by /api/download/[id] to redirect the browser
-// directly to MinIO so the app server never buffers the original bytes.
+// A short-lived presigned URL. Used by /api/download/[id] and the video route to
+// redirect the browser directly to MinIO so the app server never buffers bytes.
+// Pass `inline: true` for video playback (no forced download); omit or pass false
+// for file downloads. Pass `filename` to set a download filename.
 export async function getSignedDownloadUrl(
   key: string,
   ttlSeconds = 600,
-  filename?: string
+  filename?: string,
+  inline = false
 ): Promise<string> {
   const s3 = createS3Client();
-  const disposition = filename
-    ? `attachment; filename="${encodeURIComponent(filename)}"`
-    : "attachment";
+  const disposition = inline
+    ? "inline"
+    : filename
+      ? `attachment; filename="${encodeURIComponent(filename)}"`
+      : "attachment";
   return getSignedUrl(
     s3,
     new GetObjectCommand({

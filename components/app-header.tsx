@@ -1,13 +1,23 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useTheme } from "@/components/theme-provider";
 
 interface AppHeaderProps {
   userEmail: string;
 }
 
-// Sun icon — shown in dark mode (click to go light)
+const NAV = [
+  { href: "/dashboard", label: "Dashboard" },
+  { href: "/board", label: "Board" },
+  { href: "/posts", label: "Posts" },
+  { href: "/compose", label: "Compose" },
+  { href: "/create", label: "Create" },
+  { href: "/insights", label: "Insights" },
+  { href: "/menu", label: "Menu" },
+];
+
 function SunIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -24,7 +34,6 @@ function SunIcon() {
   );
 }
 
-// Moon icon — shown in light mode (click to go dark)
 function MoonIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -35,64 +44,78 @@ function MoonIcon() {
 
 export function AppHeader({ userEmail }: AppHeaderProps) {
   const { theme, toggleTheme } = useTheme();
+  const pathname = usePathname();
 
   return (
     <header
-      className="flex items-center justify-between px-5 py-3"
       style={{
         background: "var(--surface)",
         borderBottom: "1px solid var(--border)",
       }}
     >
-      <div className="flex items-center gap-5">
+      {/* Top row: wordmark + user controls */}
+      <div className="flex items-center justify-between px-5 py-3">
         <Link
           href="/dashboard"
           className="text-lg tracking-tight"
-          style={{
-            fontFamily: "var(--font-serif)",
-            fontWeight: 600,
-            color: "var(--text-primary)",
-          }}
+          style={{ fontFamily: "var(--font-serif)", fontWeight: 600, color: "var(--text-primary)" }}
         >
           Provenance
         </Link>
-        <Link
-          href="/dashboard"
-          className="text-sm"
-          style={{ color: "var(--text-dim)" }}
-          onMouseEnter={(e) => (e.currentTarget.style.color = "var(--gold)")}
-          onMouseLeave={(e) => (e.currentTarget.style.color = "var(--text-dim)")}
-        >
-          Dashboard
-        </Link>
-      </div>
 
-      <div className="flex items-center gap-4 text-sm" style={{ color: "var(--text-dim)" }}>
-        <span className="hidden sm:inline">{userEmail}</span>
+        <div className="flex items-center gap-4 text-sm" style={{ color: "var(--text-dim)" }}>
+          <span className="hidden sm:inline">{userEmail}</span>
 
-        {/* Theme toggle: sun in dark mode, moon in light mode */}
-        <button
-          onClick={toggleTheme}
-          aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-          style={{ color: "var(--text-dim)" }}
-          className="flex items-center"
-          onMouseEnter={(e) => (e.currentTarget.style.color = "var(--gold)")}
-          onMouseLeave={(e) => (e.currentTarget.style.color = "var(--text-dim)")}
-        >
-          {theme === "dark" ? <SunIcon /> : <MoonIcon />}
-        </button>
-
-        <form action="/auth/signout" method="post">
           <button
-            className="underline"
+            onClick={toggleTheme}
+            aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
             style={{ color: "var(--text-dim)" }}
-            onMouseEnter={(e) => (e.currentTarget.style.color = "var(--text-primary)")}
+            className="flex items-center"
+            onMouseEnter={(e) => (e.currentTarget.style.color = "var(--gold)")}
             onMouseLeave={(e) => (e.currentTarget.style.color = "var(--text-dim)")}
           >
-            Sign out
+            {theme === "dark" ? <SunIcon /> : <MoonIcon />}
           </button>
-        </form>
+
+          <form action="/auth/signout" method="post">
+            <button
+              className="underline"
+              style={{ color: "var(--text-dim)" }}
+              onMouseEnter={(e) => (e.currentTarget.style.color = "var(--text-primary)")}
+              onMouseLeave={(e) => (e.currentTarget.style.color = "var(--text-dim)")}
+            >
+              Sign out
+            </button>
+          </form>
+        </div>
       </div>
+
+      {/* Nav tab row */}
+      <nav
+        className="flex items-center gap-1 px-4 overflow-x-auto"
+        style={{ borderTop: "1px solid var(--border)" }}
+      >
+        {NAV.map(({ href, label }) => {
+          const active = pathname === href || (href !== "/dashboard" && pathname.startsWith(href));
+          return (
+            <Link
+              key={href}
+              href={href}
+              className="text-sm whitespace-nowrap px-3 py-2"
+              style={{
+                color: active ? "var(--gold)" : "var(--text-dim)",
+                borderBottom: active ? "2px solid var(--gold)" : "2px solid transparent",
+                fontWeight: active ? 600 : 400,
+                textDecoration: "none",
+              }}
+              onMouseEnter={(e) => { if (!active) e.currentTarget.style.color = "var(--text-secondary)"; }}
+              onMouseLeave={(e) => { if (!active) e.currentTarget.style.color = "var(--text-dim)"; }}
+            >
+              {label}
+            </Link>
+          );
+        })}
+      </nav>
     </header>
   );
 }

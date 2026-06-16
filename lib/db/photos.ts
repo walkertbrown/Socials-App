@@ -31,14 +31,19 @@ export async function getProcessingIds(): Promise<string[]> {
   return (data ?? []).map((r) => r.id as string);
 }
 
-export async function getReadyPhotos(): Promise<Photo[]> {
+// Optional createdAfter filters by the photos_created_at_idx index (Phase 4 date filter).
+export async function getReadyPhotos(createdAfter?: Date): Promise<Photo[]> {
   const supabase = createAdminClient();
-  const { data } = await supabase
+  let query = supabase
     .from("photos")
     .select("*")
     .eq("status", "ready")
     .neq("category", "videos")
     .order("created_at", { ascending: false });
+  if (createdAfter) {
+    query = query.gte("created_at", createdAfter.toISOString());
+  }
+  const { data } = await query;
   return (data ?? []) as Photo[];
 }
 
@@ -160,4 +165,99 @@ export async function setDisplayName(id: string, name: string): Promise<string> 
   const supabase = createAdminClient();
   await supabase.from("photos").update({ display_name: cleaned || null }).eq("id", id);
   return cleaned;
+}
+
+// ── Upload-flow helpers ───────────────────────────────────────────────────────
+
+// Insert a placeholder row for a direct-to-MinIO upload in progress.
+// Returns the new row's id so the client can track it and POST /api/process later.
+// object_key is the flat uuid-based key (e.g. "uploads/abc.jpg").
+// filename is the original browser filename stored as drive_name for display.
+export async function insertUploadPlaceholder(
+  objectKey: string,
+  filename: string
+): Promise<string> {
+  const supabase = createAdminClient();
+  const { data, error } = await supabase
+    .from("photos")
+    .insert({
+      object_key: objectKey,
+      drive_name: filename,
+      storage_backend: "minio",
+      status: "processing",
+    })
+    .select("id")
+    .single();
+  if (error) throw new Error(error.message);
+  return data.id as string;
+}
+
+// Hard-delete a placeholder row. Used by the abort route to clean up a row whose
+// upload failed so it never becomes an orphan.
+export async function deletePhoto(id: string): Promise<void> {
+  const supabase = createAdminClient();
+  await supabase.from("photos").delete().eq("id", id);
+}
+
+// ── Review-gate helpers ───────────────────────────────────────────────────────
+
+// All photos waiting for the user to approve (or edit + approve) before they
+// appear on the main board. These are upload-origin photos that have been
+// processed (vision-tagged + auto-named) but not yet approved.
+export async function getPendingReview(): Promise<Photo[]> {
+  const supabase = createAdminClient();
+  const { data } = await supabase
+    .from("photos")
+    .select("*")
+    .eq("status", "pending_review")
+    .order("created_at", { ascending: false });
+  return (data ?? []) as Photo[];
+}
+
+// Re-derive a suggested display_name when the user changes category on the review
+// screen. Computes the prefix from the new category and rebuilds the name using
+// whatever description the vision tag already produced. Caller (the review UI) can
+// still let the user override the computed name afterwards.
+export async function setCategory(id: string, category: string): Promise<string | null> {
+  const { isCategoryKey } = await import("@/lib/categories");
+  if (!isCategoryKey(category)) throw new Error("Unknown category: " + category);
+
+  const supabase = createAdminClient();
+
+  // Read the current photo to get description + created_at for re-deriving the name.
+  const { data: photo } = await supabase
+    .from("photos")
+    .select("description, created_at, object_key")
+    .eq("id", id)
+    .maybeSingle();
+  if (!photo) throw new Error("Photo not found");
+
+  // Re-derive the suggested name so the review screen can show it immediately.
+  const { buildName, categoryToPrefix } = await import("@/lib/naming");
+  const prefix = categoryToPrefix[category as keyof typeof categoryToPrefix] ?? "UNSORTED";
+  const ext = photo.object_key?.split(".").pop() ?? "jpg";
+  const suggestedName = buildName({
+    prefix,
+    createdAt: new Date(photo.created_at),
+    description: photo.description ?? "",
+    ext,
+  });
+
+  await supabase
+    .from("photos")
+    .update({ category, tags: [category], display_name: suggestedName })
+    .eq("id", id);
+
+  return suggestedName;
+}
+
+// Move a pending_review photo to ready (appears on the main board).
+// drive_placed_at stays NULL so the box job picks it up for Drive mirroring.
+export async function approvePhoto(id: string): Promise<void> {
+  const supabase = createAdminClient();
+  await supabase
+    .from("photos")
+    .update({ status: "ready" })
+    .eq("id", id)
+    .eq("status", "pending_review");
 }

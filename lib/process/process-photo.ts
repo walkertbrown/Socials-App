@@ -5,10 +5,12 @@ import { createThumbnail, storeThumbnail } from "@/lib/process/make-thumbnail";
 import { hashAndGroup } from "@/lib/process/perceptual-hash";
 import { analyzePhoto } from "@/lib/process/vision-tag";
 import { makeVideoThumbnail } from "@/lib/process/video-thumbnail";
+import { buildName, categoryToPrefix } from "@/lib/naming";
+import { setDisplayName } from "@/lib/db/photos";
 
 export interface ProcessResult {
   id: string;
-  status: "ready";
+  status: "ready" | "pending_review";
   category?: string;
   skipped?: boolean;
 }
@@ -22,22 +24,26 @@ export async function processOnePhoto(photoId: string): Promise<ProcessResult> {
   const { data: photo } = await supabase
     .from("photos")
     .select(
-      "id, drive_file_id, drive_name, object_key, storage_backend, display_name, status, category"
+      "id, drive_file_id, drive_name, object_key, storage_backend, display_name, status, category, created_at"
     )
     .eq("id", photoId)
     .maybeSingle();
   if (!photo) throw new Error("Photo not found");
 
   // Idempotency: already processed → skip all heavy work.
-  if (photo.status === "ready" && photo.category) {
-    return { id: photoId, status: "ready", skipped: true };
+  // Both "ready" and "pending_review" count as already processed.
+  if ((photo.status === "ready" || photo.status === "pending_review") && photo.category) {
+    return { id: photoId, status: photo.status as "ready" | "pending_review", skipped: true };
   }
 
   // Infer mime type from the object key extension. All rows are MinIO-backed.
   const mimeType = mimeFromKey(photo.object_key ?? "");
 
-  // Videos: extract one preview frame, describe it, then mark ready.
-  // No file move — category lives in the DB.
+  // Detect if this photo came from a browser upload (flat uuid key under "uploads/").
+  const isUploadOrigin = photo.object_key?.startsWith("uploads/") ?? false;
+
+  // Videos: extract one preview frame, describe it, then mark ready (or pending_review
+  // if it was uploaded via the browser).
   if (mimeType.startsWith("video/")) {
     let thumbnailPath: string | null = null;
     let description: string | null = null;
@@ -55,6 +61,21 @@ export async function processOnePhoto(photoId: string): Promise<ProcessResult> {
       /* missing frame is non-fatal — the tile shows without a thumbnail */
     }
 
+    const finalStatus = isUploadOrigin ? "pending_review" : "ready";
+
+    // Auto-name upload-origin videos before the update so we can include it.
+    let displayName: string | null = null;
+    if (isUploadOrigin) {
+      const prefix = categoryToPrefix["videos"] ?? "VID";
+      const ext = photo.object_key?.split(".").pop() ?? "mp4";
+      displayName = buildName({
+        prefix,
+        createdAt: photo.created_at ? new Date(photo.created_at) : new Date(),
+        description: description ?? "",
+        ext,
+      });
+    }
+
     await supabase
       .from("photos")
       .update({
@@ -62,10 +83,11 @@ export async function processOnePhoto(photoId: string): Promise<ProcessResult> {
         thumbnail_path: thumbnailPath,
         description,
         tags,
-        status: "ready",
+        status: finalStatus,
+        ...(displayName ? { display_name: displayName } : {}),
       })
       .eq("id", photoId);
-    return { id: photoId, status: "ready", category: "videos" };
+    return { id: photoId, status: finalStatus, category: "videos" };
   }
 
   // Photos: full pipeline. Download original from whatever backend holds it.
@@ -87,6 +109,24 @@ export async function processOnePhoto(photoId: string): Promise<ProcessResult> {
   const { hash, duplicateGroupId } = await hashAndGroup(thumb);
   const { category, description, tags } = await analyzePhoto(thumb);
 
+  // Upload-origin photos go to "pending_review" so the user can check + approve
+  // them before they land on the main board. We also auto-derive a display name
+  // from the category + vision description so she has something to edit.
+  const finalStatus = isUploadOrigin ? "pending_review" : "ready";
+  let displayName: string | null = null;
+  if (isUploadOrigin && category) {
+    const prefix = categoryToPrefix[category] ?? "UNSORTED";
+    const ext = photo.object_key?.split(".").pop() ?? "jpg";
+    displayName = buildName({
+      prefix,
+      createdAt: new Date(),
+      description: description ?? "",
+      ext,
+    });
+    // Persist via the shared helper (trims, caps length).
+    await setDisplayName(photoId, displayName);
+  }
+
   await supabase
     .from("photos")
     .update({
@@ -96,11 +136,11 @@ export async function processOnePhoto(photoId: string): Promise<ProcessResult> {
       category,
       description,
       tags: tags.length ? tags : [category],
-      status: "ready",
+      status: finalStatus,
     })
     .eq("id", photoId);
 
-  return { id: photoId, status: "ready", category };
+  return { id: photoId, status: finalStatus, category };
 }
 
 // Infer a broad mime type from a MinIO object key extension.

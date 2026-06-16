@@ -2,6 +2,7 @@ import "server-only";
 import {
   GetObjectCommand,
   ListObjectsV2Command,
+  PutObjectCommand,
   type _Object,
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
@@ -51,6 +52,27 @@ export async function getSignedDownloadUrl(
       Bucket: s3Bucket(),
       Key: key,
       ResponseContentDisposition: disposition,
+    }),
+    { expiresIn: ttlSeconds }
+  );
+}
+
+// A short-lived presigned URL that lets the browser PUT a file directly to MinIO,
+// skipping the app server entirely. The browser includes Content-Type in the PUT
+// and MinIO enforces it (so we pass it here to match). TTL defaults to 15 minutes,
+// which is enough for large files on a home connection.
+export async function getSignedPutUrl(
+  objectKey: string,
+  contentType: string,
+  ttlSeconds = 900
+): Promise<string> {
+  const s3 = createS3Client();
+  return getSignedUrl(
+    s3,
+    new PutObjectCommand({
+      Bucket: s3Bucket(),
+      Key: objectKey,
+      ContentType: contentType,
     }),
     { expiresIn: ttlSeconds }
   );

@@ -50,3 +50,15 @@ export async function storeThumbnail(driveFileId: string, thumbnail: Buffer): Pr
   if (error) throw new Error(`Thumbnail upload failed: ${error.message}`);
   return path;
 }
+
+// Store a pre-generated 2048px post-ready JPEG so publish time is a fast
+// getPublicUrl instead of a full MinIO download + convert.
+export async function storePostReady(photoId: string, jpeg: Buffer): Promise<string> {
+  const path = `${photoId}.jpg`;
+  const supabase = createAdminClient();
+  const { error } = await supabase.storage
+    .from("post-ready")
+    .upload(path, jpeg, { contentType: "image/jpeg", upsert: true });
+  if (error) throw new Error(`Post-ready upload failed: ${error.message}`);
+  return path;
+}

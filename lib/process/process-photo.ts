@@ -1,7 +1,7 @@
 import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getOriginal } from "@/lib/storage/index";
-import { createThumbnail, storeThumbnail } from "@/lib/process/make-thumbnail";
+import { createThumbnail, storeThumbnail, toPostJpeg, storePostReady } from "@/lib/process/make-thumbnail";
 import { hashAndGroup } from "@/lib/process/perceptual-hash";
 import { analyzePhoto } from "@/lib/process/vision-tag";
 import { extractVideoFrame } from "@/lib/process/video-thumbnail";
@@ -106,6 +106,11 @@ export async function processOnePhoto(photoId: string): Promise<ProcessResult> {
   // a stable path whether or not they have a Drive id.
   const thumbnailPath = await storeThumbnailById(photoId, thumb);
 
+  // Pre-generate a 2048px post-ready JPEG from the already-downloaded original.
+  // Stored permanently so publish time is a fast getPublicUrl, not a MinIO download.
+  const postJpeg = await toPostJpeg(original);
+  const postReadyPath = await storePostReady(photoId, postJpeg);
+
   const { hash, duplicateGroupId } = await hashAndGroup(thumb);
   const { category, description, tags } = await analyzePhoto(thumb);
 
@@ -131,6 +136,7 @@ export async function processOnePhoto(photoId: string): Promise<ProcessResult> {
     .from("photos")
     .update({
       thumbnail_path: thumbnailPath,
+      post_ready_path: postReadyPath,
       perceptual_hash: hash,
       duplicate_group_id: duplicateGroupId,
       category,

@@ -32,7 +32,7 @@ export async function publishPost(post: ScheduledPost): Promise<void> {
   const sb = createAdminClient();
   const { data: photo } = await sb
     .from("photos")
-    .select("object_key")
+    .select("object_key, post_ready_path")
     .eq("id", post.photo_id)
     .maybeSingle();
   if (!photo?.object_key) {
@@ -40,10 +40,10 @@ export async function publishPost(post: ScheduledPost): Promise<void> {
     return;
   }
 
-  let staged: { url: string; path: string } | null = null;
+  let staged: { url: string; path: string | null } | null = null;
   try {
     const creds = await requireCredentials();
-    staged = await stageImage(photo.object_key);
+    staged = await stageImage(photo.object_key, photo.post_ready_path);
 
     let fbId: string | null = null;
     let igId: string | null = null;

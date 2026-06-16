@@ -6,16 +6,27 @@ import { toPostJpeg } from "@/lib/process/make-thumbnail";
 const BUCKET = "post-images";
 const GRAPHICS_BUCKET = "graphics";
 
-// Pulls the full-res original from MinIO, converts it to a clean JPEG, and puts
-// it in the PUBLIC bucket so Meta can fetch it. Returns { url, path }; the caller
-// MUST delete `path` afterward (see cleanup-image).
-export async function stageImage(objectKey: string): Promise<{ url: string; path: string }> {
+// Returns a public URL for the post-ready image Meta will fetch.
+// Fast path: if a pre-generated 2048px copy exists in 'post-ready', return its
+// public URL directly — no MinIO download, no conversion, no temp file.
+// Slow fallback: download the full original from MinIO, convert, stage in
+// 'post-images', and return { url, path } so the caller can clean up afterward.
+export async function stageImage(
+  objectKey: string,
+  postReadyPath?: string | null
+): Promise<{ url: string; path: string | null }> {
+  const sb = createAdminClient();
+
+  if (postReadyPath) {
+    const { data } = sb.storage.from("post-ready").getPublicUrl(postReadyPath);
+    return { url: data.publicUrl, path: null };
+  }
+
   const original = await getObjectBytes(objectKey);
   const jpeg = await toPostJpeg(original);
 
-  // Use a timestamp-suffixed key so concurrent posts never collide.
+  // Timestamp-suffixed key so concurrent posts never collide.
   const path = `${objectKey.replace(/\//g, "-")}-${Date.now()}.jpg`;
-  const sb = createAdminClient();
   const { error } = await sb.storage
     .from(BUCKET)
     .upload(path, jpeg, { contentType: "image/jpeg", upsert: true });

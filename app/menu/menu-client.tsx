@@ -1,10 +1,5 @@
 "use client";
 
-// Full UI flow for the Menu Maker:
-//   Step 1 (idle)   — PDF file picker
-//   Step 2 (preview) — interactive cut-line editor + Generate button
-//   Step 3 (results) — download links for all outputs
-
 import { useState, useRef } from "react";
 import { CutLineEditor } from "./cut-line-editor";
 import { OutputCard } from "./output-card";
@@ -14,6 +9,39 @@ type Step = "idle" | "loading-preview" | "preview" | "generating" | "results";
 interface Results {
   fullPage: string;
   sections: string[];
+}
+
+// Renders page 1 of a PDF file to an HTMLCanvasElement at the given pixel width.
+// Loads pdfjs-dist dynamically (already in node_modules via pdf-to-img).
+async function renderPdfToCanvas(file: File, targetWidth: number): Promise<HTMLCanvasElement> {
+  const pdfjsLib = await import("pdfjs-dist");
+  // Use unpkg CDN for the worker — avoids Next.js bundler complications.
+  pdfjsLib.GlobalWorkerOptions.workerSrc =
+    `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
+
+  const arrayBuffer = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(arrayBuffer) }).promise;
+  const page = await pdf.getPage(1);
+
+  const nativeVp = page.getViewport({ scale: 1 });
+  const scale = targetWidth / nativeVp.width;
+  const vp = page.getViewport({ scale });
+
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.round(vp.width);
+  canvas.height = Math.round(vp.height);
+  await page.render({ canvasContext: canvas.getContext("2d")!, viewport: vp, canvas }).promise;
+  return canvas;
+}
+
+// Safely parse a fetch response as JSON, surfacing a real error if the server
+// returns HTML (e.g. a Next.js 500 page).
+async function parseJson(res: Response) {
+  const ct = res.headers.get("content-type") ?? "";
+  if (!ct.includes("application/json")) {
+    throw new Error(`Server error (${res.status}) — check logs`);
+  }
+  return res.json();
 }
 
 export function MenuClient() {
@@ -35,8 +63,7 @@ export function MenuClient() {
 
   async function handleUpload(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    const form = e.currentTarget;
-    const input = form.elements.namedItem("pdf") as HTMLInputElement;
+    const input = (e.currentTarget.elements.namedItem("pdf") as HTMLInputElement);
     const file = input.files?.[0];
     if (!file) return;
 
@@ -44,14 +71,10 @@ export function MenuClient() {
     setStep("loading-preview");
     setError(null);
 
-    const fd = new FormData();
-    fd.append("file", file);
-
     try {
-      const res = await fetch("/api/menu/preview", { method: "POST", body: fd });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error ?? "Preview failed");
-      setPreviewSrc(`data:image/png;base64,${json.preview}`);
+      // Render PDF page 1 at 900px wide in the browser — no server call needed.
+      const canvas = await renderPdfToCanvas(file, 900);
+      setPreviewSrc(canvas.toDataURL("image/png"));
       setCuts([]);
       setStep("preview");
     } catch (err) {
@@ -66,14 +89,21 @@ export function MenuClient() {
     setStep("generating");
     setError(null);
 
-    const fd = new FormData();
-    fd.append("file", fileRef.current);
-    fd.append("cuts", JSON.stringify(cuts));
-
     try {
+      // Re-render at full resolution for the final output.
+      const canvas = await renderPdfToCanvas(fileRef.current, 1800);
+      const blob = await new Promise<Blob>((resolve, reject) =>
+        canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("Canvas export failed"))), "image/png")
+      );
+
+      const fd = new FormData();
+      fd.append("image", blob, "menu.png");
+      fd.append("cuts", JSON.stringify(cuts));
+
       const res = await fetch("/api/menu/process", { method: "POST", body: fd });
-      const json = await res.json();
+      const json = await parseJson(res);
       if (!res.ok) throw new Error(json.error ?? "Generate failed");
+
       setResults({ fullPage: json.fullPage, sections: json.sections });
       setStep("results");
     } catch (err) {
@@ -83,76 +113,55 @@ export function MenuClient() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto py-8 px-4 space-y-6">
-      <h1 className="text-2xl font-bold text-zinc-900">Menu Maker</h1>
-      <p className="text-sm text-zinc-500">PDF menu to full-page PNG + Instagram square sections.</p>
+    <div style={{ maxWidth: 720, margin: "0 auto", padding: "32px 20px" }}>
+      <h1 style={{ fontSize: 24, fontWeight: 700, marginBottom: 6, color: "#111" }}>Menu Maker</h1>
+      <p style={{ fontSize: 13, color: "#888", marginBottom: 24 }}>
+        PDF menu → full-page PNG (Google) + square sections (Instagram).
+      </p>
 
       {error && (
-        <div className="rounded bg-red-50 border border-red-200 p-3 text-sm text-red-700">
+        <div style={{ background: "#fff0f0", border: "1px solid #fca5a5", borderRadius: 6, padding: "10px 14px", fontSize: 13, color: "#b91c1c", marginBottom: 16 }}>
           {error}
         </div>
       )}
 
-      {/* Step 1 — idle */}
       {(step === "idle" || step === "loading-preview") && (
-        <form onSubmit={handleUpload} className="space-y-3">
-          <input
-            type="file"
-            name="pdf"
-            accept="application/pdf"
-            required
-            className="block w-full text-sm text-zinc-700 file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:bg-zinc-100 file:text-sm file:font-medium hover:file:bg-zinc-200"
-          />
-          <button
-            type="submit"
-            disabled={step === "loading-preview"}
-            className="px-4 py-2 rounded bg-[#0f3d3e] text-white text-sm font-medium hover:bg-[#0f3d3e]/80 disabled:opacity-50 transition-colors"
-          >
-            {step === "loading-preview" ? "Rendering preview..." : "Upload & Preview"}
+        <form onSubmit={handleUpload} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          <input type="file" name="pdf" accept="application/pdf" required
+            style={{ fontSize: 14, color: "#555" }} />
+          <button type="submit" disabled={step === "loading-preview"}
+            style={{ alignSelf: "flex-start", padding: "8px 20px", background: "#0f3d3e", color: "#fff", border: "none", borderRadius: 6, fontSize: 14, fontWeight: 600, cursor: "pointer", opacity: step === "loading-preview" ? 0.6 : 1 }}>
+            {step === "loading-preview" ? "Rendering preview…" : "Upload & Preview"}
           </button>
         </form>
       )}
 
-      {/* Step 2 — preview */}
       {(step === "preview" || step === "generating") && previewSrc && (
-        <div className="space-y-4">
-          <p className="text-xs text-zinc-500">Click to add cut lines. Drag to adjust.</p>
+        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+          <p style={{ fontSize: 12, color: "#888" }}>Click to add cut lines. Drag to adjust. Click × to remove.</p>
           <CutLineEditor previewSrc={previewSrc} onChange={setCuts} />
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={handleGenerate}
-              disabled={cuts.length === 0 || step === "generating"}
-              className="px-4 py-2 rounded bg-[#0f3d3e] text-white text-sm font-medium hover:bg-[#0f3d3e]/80 disabled:opacity-50 transition-colors"
-            >
-              {step === "generating" ? "Generating..." : "Generate"}
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <button onClick={handleGenerate} disabled={cuts.length === 0 || step === "generating"}
+              style={{ padding: "8px 20px", background: "#0f3d3e", color: "#fff", border: "none", borderRadius: 6, fontSize: 14, fontWeight: 600, cursor: "pointer", opacity: (cuts.length === 0 || step === "generating") ? 0.5 : 1 }}>
+              {step === "generating" ? "Generating…" : "Generate"}
             </button>
-            <button type="button" onClick={reset} className="text-sm text-zinc-400 hover:text-zinc-600 underline">
+            <button onClick={reset} style={{ fontSize: 13, color: "#aaa", background: "none", border: "none", cursor: "pointer", textDecoration: "underline" }}>
               Start over
             </button>
           </div>
         </div>
       )}
 
-      {/* Step 3 — results */}
       {step === "results" && results && (
-        <div className="space-y-6">
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+        <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: 14 }}>
             <OutputCard base64Png={results.fullPage} filename="menu-full.png" label="Full page" />
             {results.sections.map((s, i) => (
-              <OutputCard
-                key={i}
-                base64Png={s}
-                filename={`menu-section-${i + 1}.png`}
-                label={`Section ${i + 1}`}
-              />
+              <OutputCard key={i} base64Png={s} filename={`menu-section-${i + 1}.png`} label={`Section ${i + 1}`} />
             ))}
           </div>
-          <button
-            type="button"
-            onClick={reset}
-            className="px-4 py-2 rounded bg-zinc-100 text-zinc-700 text-sm font-medium hover:bg-zinc-200 transition-colors"
-          >
+          <button onClick={reset}
+            style={{ alignSelf: "flex-start", padding: "8px 18px", background: "#f0f0f0", color: "#555", border: "none", borderRadius: 6, fontSize: 14, cursor: "pointer" }}>
             Start over
           </button>
         </div>

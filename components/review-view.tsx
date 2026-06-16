@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { CATEGORIES, labelFor, isCategoryKey } from "@/lib/categories";
 import { categoryToPrefix } from "@/lib/naming";
 import type { Photo } from "@/lib/types";
@@ -18,6 +18,10 @@ interface Props {
 export function ReviewView({ photos: initialPhotos, onApproved }: Props) {
   const [photos, setPhotos] = useState<Photo[]>(initialPhotos);
   const [busy, setBusy] = useState<Set<string>>(new Set());
+
+  // Sync when fresh server data arrives (e.g. after an upload + router.refresh).
+  // Without this the list keeps its mount-time value and looks empty until a reload.
+  useEffect(() => setPhotos(initialPhotos), [initialPhotos]);
 
   // Update local state when a field changes.
   function patchPhoto(id: string, patch: Partial<Photo>) {

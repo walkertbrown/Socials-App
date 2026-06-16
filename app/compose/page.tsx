@@ -29,6 +29,7 @@ export default async function ComposePage({
       photos={[...photos, ...videos]}
       graphics={graphics}
       preselectedGraphicId={params.graphicId ?? null}
+      userEmail={user.email ?? ""}
     />
   );
 }

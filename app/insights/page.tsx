@@ -29,5 +29,5 @@ export default async function InsightsPage({
     report = await getLatestReport();
   }
 
-  return <InsightsClient report={report} availableWeeks={availableWeeks} />;
+  return <InsightsClient report={report} availableWeeks={availableWeeks} userEmail={user.email ?? ""} />;
 }

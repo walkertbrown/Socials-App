@@ -4,6 +4,7 @@ import { useState, useMemo, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import type { Photo } from "@/lib/types";
+import { AppHeader } from "@/components/app-header";
 import { FilterBar } from "@/components/filter-bar";
 import { PhotoTile } from "@/components/photo-tile";
 import { useSync } from "@/lib/hooks/use-sync";
@@ -132,6 +133,7 @@ export function BoardClient({
 
   return (
     <div className="flex flex-1 flex-col">
+      <AppHeader userEmail={userEmail} />
       <FilterBar active={filter} onChange={setFilter} onSync={runSync} progress={progress} />
 
       <div className="flex items-center justify-between px-4 py-2 text-sm text-zinc-500">
@@ -144,10 +146,6 @@ export function BoardClient({
           <Link href="/create" className="text-zinc-700 underline">Create graphic</Link>
           <Link href="/posts" className="text-zinc-700 underline">Scheduled</Link>
           <Link href="/insights" className="text-zinc-700 underline">Insights</Link>
-          <span>{userEmail}</span>
-          <form action="/auth/signout" method="post">
-            <button className="underline">Sign out</button>
-          </form>
         </div>
       </div>
 

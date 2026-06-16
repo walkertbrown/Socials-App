@@ -6,8 +6,8 @@ const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Photo Triage",
-  description: "Pick the keepers and queue them up.",
+  title: "Provenance",
+  description: "Social media command center for Pelican Club.",
   manifest: "/manifest.json",
 };
 

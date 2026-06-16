@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 export default async function ComposePage({
   searchParams,
 }: {
-  searchParams: Promise<{ graphicId?: string }>;
+  searchParams: Promise<{ graphicId?: string; photos?: string }>;
 }) {
   const supabase = await createSupabaseServerClient();
   const {
@@ -24,11 +24,17 @@ export default async function ComposePage({
     listGraphics(),
   ]);
 
+  // ?photos=id1,id2,id3 — pre-select photos from the board (single post or carousel)
+  const preselectedPhotoIds = params.photos
+    ? params.photos.split(",").filter(Boolean)
+    : [];
+
   return (
     <ComposeClient
       photos={[...photos, ...videos]}
       graphics={graphics}
       preselectedGraphicId={params.graphicId ?? null}
+      preselectedPhotoIds={preselectedPhotoIds}
       userEmail={user.email ?? ""}
     />
   );

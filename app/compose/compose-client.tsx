@@ -25,17 +25,18 @@ export function ComposeClient({
   photos,
   graphics = [],
   preselectedGraphicId = null,
+  preselectedPhotoIds = [],
   userEmail = "",
 }: {
   photos: Photo[];
   graphics?: Graphic[];
   preselectedGraphicId?: string | null;
+  preselectedPhotoIds?: string[];
   userEmail?: string;
 }) {
   const router = useRouter();
-  // When a graphic is selected, we track its id here instead of a photo id.
   const [selectedGraphicId, setSelectedGraphicId] = useState<string | null>(preselectedGraphicId);
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [selectedIds, setSelectedIds] = useState<string[]>(preselectedPhotoIds);
 
   // If a graphicId was passed from /create, default to "graphic" media mode.
   const [mediaMode, setMediaMode] = useState<"photo" | "graphic">(

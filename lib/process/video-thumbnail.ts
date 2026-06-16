@@ -4,7 +4,6 @@ import fs from "fs/promises";
 import os from "os";
 import path from "path";
 import { getSignedDownloadUrl } from "@/lib/storage/objects";
-import { storeThumbnail } from "@/lib/process/make-thumbnail";
 
 function run(cmd: string, args: string[]): Promise<void> {
   return new Promise((resolve, reject) => {
@@ -40,12 +39,3 @@ export async function extractVideoFrame(objectKey: string): Promise<Buffer> {
   }
 }
 
-// Extract a frame and store it as the video's thumbnail. Returns the stored path
-// and the frame buffer (for describing/tagging in the same pass).
-export async function makeVideoThumbnail(
-  objectKey: string
-): Promise<{ path: string; frame: Buffer }> {
-  const frame = await extractVideoFrame(objectKey);
-  const path = await storeThumbnail(objectKey, frame);
-  return { path, frame };
-}

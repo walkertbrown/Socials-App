@@ -4,7 +4,7 @@ import { getOriginal } from "@/lib/storage/index";
 import { createThumbnail, storeThumbnail } from "@/lib/process/make-thumbnail";
 import { hashAndGroup } from "@/lib/process/perceptual-hash";
 import { analyzePhoto } from "@/lib/process/vision-tag";
-import { makeVideoThumbnail } from "@/lib/process/video-thumbnail";
+import { extractVideoFrame } from "@/lib/process/video-thumbnail";
 import { buildName, categoryToPrefix } from "@/lib/naming";
 import { setDisplayName } from "@/lib/db/photos";
 
@@ -49,11 +49,11 @@ export async function processOnePhoto(photoId: string): Promise<ProcessResult> {
     let description: string | null = null;
     let tags: string[] = ["videos"];
     try {
-      // makeVideoThumbnail presigns the MinIO object and has ffmpeg range-read it,
+      // extractVideoFrame presigns the MinIO object and has ffmpeg range-read it,
       // so we never buffer the whole file. Non-fatal: missing frame shows no thumb.
       const frameKey = photo.object_key ?? "";
-      const { path, frame } = await makeVideoThumbnail(frameKey);
-      thumbnailPath = path;
+      const frame = await extractVideoFrame(frameKey);
+      thumbnailPath = await storeThumbnailById(photoId, frame);
       const analysis = await analyzePhoto(frame);
       if (analysis.description) description = analysis.description;
       if (analysis.tags.length) tags = analysis.tags;

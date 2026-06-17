@@ -226,10 +226,6 @@ export function ComposeClient({
         >
           New post
         </h1>
-        <div className="flex items-center gap-3 text-sm">
-          <Link href="/create" className="underline" style={{ color: "var(--text-dim)" }}>Create graphic</Link>
-          <Link href="/board" className="underline" style={{ color: "var(--text-dim)" }}>← Board</Link>
-        </div>
       </div>
 
       {/* Media mode: photo/video vs saved graphic */}

@@ -5,7 +5,6 @@
 // Reads from the already-stored weekly_reports row passed from the server.
 
 import { useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { WeeklyReport } from "@/lib/db/weekly-reports";
 import { AppHeader } from "@/components/app-header";
@@ -219,9 +218,6 @@ function Header({
             {isRegenerating ? "Regenerating…" : "Regenerate"}
           </button>
         )}
-        <Link href="/posts" className="underline" style={{ color: "var(--text-dim)" }}>
-          ← Posts
-        </Link>
       </div>
     </div>
   );

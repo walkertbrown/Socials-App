@@ -46,15 +46,6 @@ export function PostsClient({ initialGroups, userEmail = "" }: { initialGroups: 
           >
             New post
           </Link>
-          <Link href="/create" className="underline" style={{ color: "var(--text-dim)" }}>
-            Create graphic
-          </Link>
-          <Link href="/insights" className="underline" style={{ color: "var(--text-dim)" }}>
-            Insights
-          </Link>
-          <Link href="/board" className="underline" style={{ color: "var(--text-dim)" }}>
-            ← Board
-          </Link>
         </div>
       </div>
 

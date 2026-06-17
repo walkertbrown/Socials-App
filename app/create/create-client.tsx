@@ -8,7 +8,6 @@
 //   2. "questions" phase → answers optional questions → "Generate"
 //   3. "results" phase  → two images; pick one → overlay → save
 
-import Link from "next/link";
 import { AppHeader } from "@/components/app-header";
 import { ClarifyingQuestions } from "./clarifying-questions";
 import { ResultsGallery } from "./results-gallery";
@@ -91,9 +90,6 @@ export function CreateClient({ userEmail = "" }: CreateClientProps) {
           >
             Create Graphic
           </h1>
-          <Link href="/board" className="text-sm underline" style={{ color: "var(--text-dim)" }}>
-            ← Board
-          </Link>
         </div>
 
         {/* ── Prompt + format + primary CTA ── */}

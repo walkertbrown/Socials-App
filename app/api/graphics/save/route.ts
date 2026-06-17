@@ -1,71 +1,62 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getUserOrNull } from "@/lib/auth/require-user";
-import { getPhotoUrlForGraphic } from "@/lib/graphics/pick-graphic-photo";
-import { buildGraphicHtml } from "@/lib/graphics/render/html";
-import { renderToPng } from "@/lib/graphics/render/adapter";
 import { storeGraphicPng } from "@/lib/graphics/render/store-graphic";
 import { createGraphic } from "@/lib/db/graphics";
-import type { DesignSpec } from "@/lib/graphics/templates/types";
 
 export const runtime = "nodejs";
-export const maxDuration = 60;
+export const maxDuration = 30;
 
-// Explicit Save: renders the final spec, writes the PNG to the graphics bucket,
-// creates a DB row, returns the graphic id and public URL.
+// Explicit Save: receives the final composited PNG from the browser canvas,
+// uploads it to the graphics bucket, creates a DB row, and returns the id + URL.
 //
-// Cost guard: this is the ONLY route that writes to the bucket. Preview and
-// Regenerate calls (/generate and /render) are transient — they never store.
+// Cost guard: this is the ONLY route that writes to the bucket. The generate
+// route is transient — it never stores anything.
 //
-// Body: { spec: DesignSpec }
+// Body: { pngBase64: string, format: "feed"|"story", model: string, enhancedPrompt: string }
 export async function POST(request: NextRequest) {
   const user = await getUserOrNull();
   if (!user) return new NextResponse("Unauthorized", { status: 401 });
 
   const body = await request.json();
-  const spec = body.spec as DesignSpec | undefined;
-  if (!spec?.templateId) {
-    return NextResponse.json({ error: "spec is required" }, { status: 400 });
+  const { pngBase64, format, model, enhancedPrompt } = body;
+
+  if (typeof pngBase64 !== "string" || !pngBase64) {
+    return NextResponse.json({ error: "pngBase64 is required" }, { status: 400 });
   }
 
-  // Resolve photo URL if this is a photo-background template.
-  let photoUrl: string | null = null;
-  if (spec.photoId) {
-    photoUrl = await getPhotoUrlForGraphic(spec.photoId);
-  }
+  const resolvedFormat: "feed" | "story" = format === "story" ? "story" : "feed";
 
-  const appBaseUrl = getAppBaseUrl(request);
-  const html = buildGraphicHtml({ spec, photoUrl, appBaseUrl });
-  const { width, height } = sizePixels(spec.size);
+  // Decode base64 to a Buffer for storage upload.
+  const pngBuffer = Buffer.from(pngBase64, "base64");
 
-  let pngBuffer: Buffer;
+  const { randomUUID } = await import("crypto");
+  const graphicId = randomUUID();
+
+  let storageResult: { url: string; path: string };
   try {
-    pngBuffer = await renderToPng({ html, width, height });
+    storageResult = await storeGraphicPng(pngBuffer, graphicId, resolvedFormat);
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });
   }
 
-  // Generate a stable id upfront so the bucket path includes it.
-  const { randomUUID } = await import("crypto");
-  const graphicId = randomUUID();
+  // The graphics table has a NOT NULL design_spec column that is vestigial for
+  // image-gen graphics. Write a provenance marker so the row is self-documenting.
+  const provenanceSpec: Record<string, unknown> = {
+    source: "image-gen",
+    model: typeof model === "string" ? model : "unknown",
+    enhancedPrompt: typeof enhancedPrompt === "string" ? enhancedPrompt : "",
+  };
 
-  const { url, path } = await storeGraphicPng(pngBuffer, graphicId, spec.size);
+  let graphic;
+  try {
+    graphic = await createGraphic({
+      design_spec: provenanceSpec,
+      png_path: storageResult.path,
+      size: resolvedFormat,
+    });
+  } catch (e) {
+    return NextResponse.json({ error: (e as Error).message }, { status: 500 });
+  }
 
-  // Create the DB row. The id is pre-generated so the path is deterministic.
-  const graphic = await createGraphic({
-    design_spec: spec as unknown as Record<string, unknown>,
-    png_path: path,
-    size: spec.size,
-  });
-
-  return NextResponse.json({ graphicId: graphic.id, url });
-}
-
-function sizePixels(size: "feed" | "story"): { width: number; height: number } {
-  return size === "story" ? { width: 1080, height: 1920 } : { width: 1080, height: 1080 };
-}
-
-function getAppBaseUrl(req: NextRequest): string {
-  if (process.env.NEXT_PUBLIC_APP_URL) return process.env.NEXT_PUBLIC_APP_URL;
-  const url = new URL(req.url);
-  return `${url.protocol}//${url.host}`;
+  return NextResponse.json({ graphicId: graphic.id, url: storageResult.url });
 }

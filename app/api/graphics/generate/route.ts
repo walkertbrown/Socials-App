@@ -1,91 +1,95 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getUserOrNull } from "@/lib/auth/require-user";
-import { buildDesignSpec } from "@/lib/graphics/design-spec";
-import { getTextSafePhotoIds, getPhotoUrlForGraphic } from "@/lib/graphics/pick-graphic-photo";
-import { buildGraphicHtml } from "@/lib/graphics/render/html";
-import { renderToPng } from "@/lib/graphics/render/adapter";
+import { enhancePrompt } from "@/lib/graphics/enhance-prompt";
+import { generateGeminiImage } from "@/lib/graphics/models/gemini-image";
+import { generateOpenAIImage } from "@/lib/graphics/models/openai-image";
 
 export const runtime = "nodejs";
-// Allow up to 45 s — Browserless render is typically 2–5 s but font fetches
-// can add a few seconds.
-export const maxDuration = 45;
+// Image generation can take 30–60 s per model; 120 s gives both parallel calls room.
+export const maxDuration = 120;
 
-// Prompt → AI spec → render → return PNG inline as base64 + the spec.
-// NOTHING is written to the bucket here (preview/generate are transient).
-// Cost guard: debounce is enforced client-side (button disabled until response);
-// the spec is returned so the client can tweak and call /api/graphics/render.
+// ── Daily cap backstop ────────────────────────────────────────────────────────
+// In-memory counter keyed by UTC date. Resets automatically each new calendar
+// day (module reloads on the next serverless cold start). Not distributed — one
+// counter per server instance — which is acceptable for a single-user tool.
+const DAILY_CAP = 25;
+let capDate = "";
+let capCount = 0;
+
+function checkAndIncrementCap(): boolean {
+  const today = new Date().toISOString().slice(0, 10); // "YYYY-MM-DD"
+  if (capDate !== today) {
+    capDate = today;
+    capCount = 0;
+  }
+  if (capCount >= DAILY_CAP) return false;
+  capCount++;
+  return true;
+}
+
+// ── Route handler ─────────────────────────────────────────────────────────────
+// Body: { prompt: string, format: "feed"|"story", enhancedPrompt?: string }
+//
+// Cost guard: if the client sends back the enhancedPrompt from a prior call with
+// the same text, we skip the Sonnet enhancement step.
+//
+// Both model calls run in parallel via Promise.allSettled so one failure does
+// not kill the other.
+//
+// Response: { enhancedPrompt, results: [{ model, ok, pngBase64?, error? }] }
 export async function POST(request: NextRequest) {
   const user = await getUserOrNull();
   if (!user) return new NextResponse("Unauthorized", { status: 401 });
 
+  if (!checkAndIncrementCap()) {
+    return NextResponse.json(
+      { error: `Daily generation limit of ${DAILY_CAP} reached. Try again tomorrow.` },
+      { status: 429 }
+    );
+  }
+
   const body = await request.json();
-  const { prompt, styleHint, size, forcePhotoId } = body;
+  const { prompt, format, enhancedPrompt: cachedEnhanced } = body;
 
   if (typeof prompt !== "string" || !prompt.trim()) {
     return NextResponse.json({ error: "prompt is required" }, { status: 400 });
   }
 
-  const resolvedSize: "feed" | "story" =
-    size === "story" ? "story" : "feed";
+  const resolvedFormat: "feed" | "story" =
+    format === "story" ? "story" : "feed";
 
-  // Get text-safe photo ids for the AI to choose from.
-  const availablePhotoIds = await getTextSafePhotoIds();
-
-  let spec;
-  try {
-    spec = await buildDesignSpec({
-      prompt: prompt.trim(),
-      styleHint: typeof styleHint === "string" ? styleHint.trim() : "",
-      size: resolvedSize,
-      availablePhotoIds,
-    });
-  } catch (e) {
-    return NextResponse.json(
-      { error: `Could not generate design spec: ${(e as Error).message}` },
-      { status: 500 }
-    );
+  // Reuse the client-cached enhanced prompt when available to skip Sonnet.
+  let enhancedPromptText: string;
+  if (typeof cachedEnhanced === "string" && cachedEnhanced.trim()) {
+    enhancedPromptText = cachedEnhanced.trim();
+  } else {
+    try {
+      enhancedPromptText = await enhancePrompt({
+        prompt: prompt.trim(),
+        format: resolvedFormat,
+      });
+    } catch (e) {
+      return NextResponse.json(
+        { error: `Could not enhance prompt: ${(e as Error).message}` },
+        { status: 500 }
+      );
+    }
   }
 
-  // If a specific photo was requested, override the AI's choice.
-  if (typeof forcePhotoId === "string" && forcePhotoId) {
-    spec.photoId = forcePhotoId;
-  }
+  // Call both models in parallel; let each fail independently.
+  const [geminiResult, openaiResult] = await Promise.allSettled([
+    generateGeminiImage({ prompt: enhancedPromptText, format: resolvedFormat }),
+    generateOpenAIImage({ prompt: enhancedPromptText, format: resolvedFormat }),
+  ]);
 
-  // Resolve photo URL if the template needs one.
-  let photoUrl: string | null = null;
-  if (spec.photoId) {
-    photoUrl = await getPhotoUrlForGraphic(spec.photoId);
-  }
+  const results = [
+    geminiResult.status === "fulfilled"
+      ? { model: "nano-banana-2", ok: true, pngBase64: geminiResult.value.pngBase64 }
+      : { model: "nano-banana-2", ok: false, error: (geminiResult.reason as Error).message },
+    openaiResult.status === "fulfilled"
+      ? { model: "gpt-image-2", ok: true, pngBase64: openaiResult.value.pngBase64 }
+      : { model: "gpt-image-2", ok: false, error: (openaiResult.reason as Error).message },
+  ];
 
-  // Determine the app base URL for the logo <img src>.
-  const appBaseUrl = getAppBaseUrl(request);
-
-  const html = buildGraphicHtml({ spec, photoUrl, appBaseUrl });
-  const { width, height } = sizePixels(resolvedSize);
-
-  let pngBuffer: Buffer;
-  try {
-    pngBuffer = await renderToPng({ html, width, height });
-  } catch (e) {
-    return NextResponse.json(
-      { error: (e as Error).message },
-      { status: 500 }
-    );
-  }
-
-  // Return PNG as base64 so the client can show a <img src="data:image/png;base64,...">
-  // preview without any storage write.
-  const pngBase64 = pngBuffer.toString("base64");
-  return NextResponse.json({ pngBase64, spec });
-}
-
-function sizePixels(size: "feed" | "story"): { width: number; height: number } {
-  return size === "story" ? { width: 1080, height: 1920 } : { width: 1080, height: 1080 };
-}
-
-function getAppBaseUrl(req: NextRequest): string {
-  // Prefer the vercel deployment URL; fall back to origin from the request.
-  if (process.env.NEXT_PUBLIC_APP_URL) return process.env.NEXT_PUBLIC_APP_URL;
-  const url = new URL(req.url);
-  return `${url.protocol}//${url.host}`;
+  return NextResponse.json({ enhancedPrompt: enhancedPromptText, results });
 }

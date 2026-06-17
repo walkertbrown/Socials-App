@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { AppHeader } from "@/components/app-header";
+import { AppShell } from "@/components/app-shell";
+import { ScreenEyebrow } from "@/components/screen-eyebrow";
 import { StudioCards } from "./studio-cards";
 
 export const dynamic = "force-dynamic";
@@ -13,23 +14,15 @@ export default async function StudioPage() {
   if (!user) redirect("/login");
 
   return (
-    <div className="flex flex-1 flex-col">
-      <AppHeader userEmail={user.email ?? ""} />
-      <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-8 px-4 py-10">
-        <div>
-          <h1
-            className="text-2xl tracking-tight"
-            style={{ fontFamily: "var(--font-serif)", fontWeight: 600, color: "var(--text-primary)" }}
-          >
-            Studio
-          </h1>
-          <p className="mt-1 text-sm" style={{ color: "var(--text-secondary)" }}>
-            Create content, manage your schedule, and build assets.
-          </p>
-        </div>
-
+    <AppShell>
+      <main className="mx-auto flex w-full max-w-xl flex-1 flex-col px-4 pt-10 pb-4">
+        <ScreenEyebrow
+          label="STUDIO"
+          title="Make something"
+          subtitle="Create content, manage your schedule, and build assets."
+        />
         <StudioCards />
       </main>
-    </div>
+    </AppShell>
   );
 }

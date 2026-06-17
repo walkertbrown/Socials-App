@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
-import { CATEGORIES, labelFor, isCategoryKey } from "@/lib/categories";
+import { CATEGORIES, VIDEO, labelFor, isCategoryKey } from "@/lib/categories";
 import { categoryToPrefix } from "@/lib/naming";
 import type { Photo } from "@/lib/types";
 
@@ -145,6 +145,9 @@ function ReviewTile({ photo, isBusy, onCategoryChange, onRename, onApprove }: Ti
 
   const prefix = categoryToPrefix[photo.category ?? "unsorted"] ?? "UNSORTED";
   const destFolder = labelFor(photo.category ?? "unsorted");
+  // Videos live in their own bin (kept out of CATEGORIES). Their category control
+  // is shown locked on "Videos" so they can't be accidentally refiled as photos.
+  const isVideo = photo.category === "videos";
 
   function submitRename() {
     onRename(photo.id, nameVal.trim());
@@ -178,14 +181,17 @@ function ReviewTile({ photo, isBusy, onCategoryChange, onRename, onApprove }: Ti
         <select
           value={photo.category ?? "unsorted"}
           onChange={(e) => onCategoryChange(photo.id, e.target.value)}
-          className="w-full rounded px-1.5 py-1 text-xs"
+          disabled={isVideo}
+          className="w-full rounded px-1.5 py-1 text-xs disabled:opacity-70"
           style={{
             border: "1px solid var(--border-hi)",
             background: "var(--surface-hi)",
             color: "var(--text-primary)",
           }}
         >
-          {CATEGORIES.map((c) => (
+          {/* For a video, add the "Videos" option so the real label shows (the
+              select is disabled above, so the value can't be changed). */}
+          {(isVideo ? [...CATEGORIES, VIDEO] : CATEGORIES).map((c) => (
             <option key={c.key} value={c.key}>
               {c.label}
             </option>

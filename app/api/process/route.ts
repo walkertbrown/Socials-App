@@ -20,6 +20,9 @@ export async function POST(request: NextRequest) {
     const result = await processOnePhoto(id);
     return NextResponse.json(result);
   } catch (e) {
+    // Surface the real failure in Vercel logs. The 500 body alone isn't captured
+    // in the log stream, so failed photos otherwise show as blank-message 500s.
+    console.error(`[process] photo ${id} failed:`, e);
     return NextResponse.json(
       { id, status: "error", message: (e as Error).message },
       { status: 500 }

@@ -4,7 +4,7 @@
 
 import type { PlatformItem } from "@/components/platform-schedule";
 
-export const PIN = "#pelicanclubNOLA";
+export const PIN = "#PelicanClubNOLA";
 
 export function makeItems(when: string, delivery: "auto" | "reminder"): PlatformItem[] {
   return ["instagram", "facebook"].map((p) => ({

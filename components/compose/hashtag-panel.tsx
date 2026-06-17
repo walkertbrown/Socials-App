@@ -21,7 +21,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { X } from "lucide-react";
 
-const PIN = "#pelicanclubNOLA"; // display casing for the pin
+const PIN = "#PelicanClubNOLA"; // display casing for the pin
 const PIN_LOWER = PIN.toLowerCase();
 const SOFT_NUDGE = 6; // warn (but don't block) above this count (excluding pin)
 const HARD_CAP = 30; // absolute max selected tags excluding pin
@@ -176,42 +176,36 @@ export function HashtagPanel({
 
   return (
     <section>
-      <p className="mb-2 text-sm font-medium" style={{ color: "var(--text-secondary)" }}>
-        {/* Section number changes depending on mode — managed by parent */}
-        Hashtags
-      </p>
-
-      {/* Selected chip row (pin first, then user-selected, each removable) */}
-      {(selectedTags.length > 0) && (
-        <div className="mb-3 flex flex-wrap gap-1.5">
-          {/* Pin — always first, not removable */}
+      {/* Selected chip row — pin always shown first + not removable, then user-selected.
+          (The numbered "Hashtags" heading is rendered by the parent.) */}
+      <div className="mb-3 flex flex-wrap gap-1.5">
+        {/* Pin — always shown first, not removable */}
+        <span
+          className="flex items-center gap-1 rounded-full px-3 py-1 text-xs"
+          style={{ background: "var(--gold)", color: "var(--on-accent)" }}
+        >
+          {PIN}
+        </span>
+        {selectedTags.map((tag) => (
           <span
+            key={tag}
             className="flex items-center gap-1 rounded-full px-3 py-1 text-xs"
             style={{ background: "var(--gold)", color: "var(--on-accent)" }}
           >
-            {PIN}
-          </span>
-          {selectedTags.map((tag) => (
-            <span
-              key={tag}
-              className="flex items-center gap-1 rounded-full px-3 py-1 text-xs"
-              style={{ background: "var(--gold)", color: "var(--on-accent)" }}
+            {tag}
+            <button
+              type="button"
+              onClick={() =>
+                onSelectedTagsChange(selectedTags.filter((t) => t !== tag))
+              }
+              className="ml-0.5 opacity-70 hover:opacity-100"
+              aria-label={`Remove ${tag}`}
             >
-              {tag}
-              <button
-                type="button"
-                onClick={() =>
-                  onSelectedTagsChange(selectedTags.filter((t) => t !== tag))
-                }
-                className="ml-0.5 opacity-70 hover:opacity-100"
-                aria-label={`Remove ${tag}`}
-              >
-                <X size={10} strokeWidth={2} />
-              </button>
-            </span>
-          ))}
-        </div>
-      )}
+              <X size={10} strokeWidth={2} />
+            </button>
+          </span>
+        ))}
+      </div>
 
       {/* Soft nudge */}
       {overSoft && !atCap && (

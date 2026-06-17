@@ -51,6 +51,22 @@ export function toDateString(d: Date): string {
   return d.toISOString().slice(0, 10);
 }
 
+// Return the Monday of the CURRENT week in America/Chicago.
+// Used by the daily snapshot cron to key the upsert row.
+export function getCurrentMondayChicago(): Date {
+  const now = new Date();
+  const chicagoStr = now.toLocaleString("en-US", { timeZone: "America/Chicago" });
+  const chicago = new Date(chicagoStr);
+
+  const dow = chicago.getDay(); // 0=Sun, 1=Mon, ...
+  const daysToThisMonday = dow === 0 ? 6 : dow - 1;
+  const thisMonday = new Date(chicago);
+  thisMonday.setDate(chicago.getDate() - daysToThisMonday);
+  thisMonday.setHours(0, 0, 0, 0);
+
+  return thisMonday;
+}
+
 // Return the Monday of the previous week in America/Chicago.
 // Used by the cron to determine which week to report on.
 export function getPreviousMondayChicago(): Date {

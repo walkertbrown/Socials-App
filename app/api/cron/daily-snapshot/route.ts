@@ -25,9 +25,10 @@ export const maxDuration = 60;
 //   If yes, return { skipped: true } immediately with NO Meta calls.
 //   This prevents retry storms and duplicate API calls from multiple triggers.
 //
-// Home-server crontab line (Walker adds this to the box):
-//   # Daily live Insights numbers — ~6:10am Chicago
-//   10 11 * * * curl -fsS -X GET https://<prod-domain>/api/cron/daily-snapshot -H "Authorization: Bearer $CRON_SECRET" >/dev/null 2>&1
+// Home-server crontab line (on the box). ⚠️ The box runs cron in LOCAL time
+// (America/Chicago), NOT UTC — use local hours, not a UTC offset. 6:10am local:
+//   # Daily live Insights numbers — 6:10am America/Chicago
+//   10 6 * * * curl -s -H "Authorization: Bearer <CRON_SECRET>" https://<prod-domain>/api/cron/daily-snapshot >/dev/null
 export async function GET(request: NextRequest) {
   // ── Auth gate (always first — before any DB or Meta calls) ───────────────
   const secret = process.env.CRON_SECRET;

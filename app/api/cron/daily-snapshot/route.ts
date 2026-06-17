@@ -1,9 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { requireCredentials } from "@/lib/meta/client";
 import { fetchIgAccountInsights, fetchFbPageInsights } from "@/lib/meta/account-insights";
-import { upsertDailySnapshot, getLatestDailySnapshots } from "@/lib/db/daily-snapshots";
+import { upsertDailySnapshot } from "@/lib/db/daily-snapshots";
 import { getRecentSnapshots } from "@/lib/db/weekly-snapshots";
-import { getCurrentMondayChicago, getWeekWindow, toDateString } from "@/lib/report/compute-week";
+import { getCurrentMondayChicago, toDateString } from "@/lib/report/compute-week";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 // Node runtime required for Supabase admin client and Meta fetch.

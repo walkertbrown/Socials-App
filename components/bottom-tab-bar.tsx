@@ -4,10 +4,16 @@
 // 4 tabs: Overview · Studio · Board · Insights.
 // Active tab renders in --gold (teal). Clears iOS home indicator via safe-area inset.
 // Desktop: centered with max-width so it doesn't stretch edge-to-edge.
+//
+// Sub-screens of Studio (/compose, /create, /posts, /menu) keep the Studio
+// tab lit so the user always knows where they are in the nav hierarchy.
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LayoutDashboard, Sparkles, Grid2x2, BarChart2 } from "lucide-react";
+
+// Routes that belong under a non-direct-match parent tab.
+const STUDIO_SUB_ROUTES = ["/compose", "/create", "/posts", "/menu", "/post"];
 
 const TABS = [
   { href: "/dashboard", label: "Overview",  Icon: LayoutDashboard },
@@ -18,6 +24,17 @@ const TABS = [
 
 export function BottomTabBar() {
   const pathname = usePathname();
+
+  function isActive(href: string): boolean {
+    if (pathname === href) return true;
+    // Studio tab also lights up for its sub-screens.
+    if (href === "/studio") {
+      return STUDIO_SUB_ROUTES.some((sub) => pathname === sub || pathname.startsWith(sub + "/"));
+    }
+    // Other tabs: prefix match (but not for dashboard to avoid false positives).
+    if (href !== "/dashboard") return pathname.startsWith(href);
+    return false;
+  }
 
   return (
     <nav
@@ -39,9 +56,7 @@ export function BottomTabBar() {
         style={{ maxWidth: 480 }}
       >
         {TABS.map(({ href, label, Icon }) => {
-          const active =
-            pathname === href ||
-            (href !== "/dashboard" && pathname.startsWith(href));
+          const active = isActive(href);
           return (
             <Link
               key={href}

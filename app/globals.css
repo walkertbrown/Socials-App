@@ -45,6 +45,9 @@
   /* On-accent (white text over teal) */
   --on-accent:    #ffffff;
 
+  /* Pressed/hover state for teal buttons — spec dark: #5fa9a2, light: #0a2e2f */
+  --accent-press: #5fa9a2;
+
   /* Safe-area padding for bottom tab bar */
   --tab-bar-h:    60px;
 }
@@ -80,6 +83,7 @@ html.dark {
   --red:          #f87171;
   --red-dim:      rgba(248,113,113,0.12);
   --on-accent:    #ffffff;
+  --accent-press: #5fa9a2;
 }
 
 /* Light mode overrides */
@@ -113,6 +117,7 @@ html.light {
   --red:          #dc2626;
   --red-dim:      rgba(220,38,38,0.10);
   --on-accent:    #ffffff;
+  --accent-press: #0a2e2f;
 }
 
 /* ── Tailwind theme bridge ───────────────────────────────────────────────────
@@ -131,6 +136,7 @@ html.light {
   --color-text-dim:   var(--text-dim);
   --color-green:      var(--green);
   --color-red:        var(--red);
+  --color-accent-press: var(--accent-press);
   --border-radius-brand: var(--radius);
   --font-sans:  var(--font-geist);
   --font-serif: var(--font-newsreader);
@@ -163,6 +169,18 @@ body {
   letter-spacing: 0.15em;
   text-transform: uppercase;
   color: var(--text-dim);
+}
+
+/* Primary teal button — use instead of bare hover:opacity-90 */
+.btn-teal {
+  background: var(--gold);
+  color: var(--on-accent);
+}
+.btn-teal:hover:not(:disabled) {
+  background: var(--accent-press);
+}
+.btn-teal:disabled {
+  opacity: 0.5;
 }
 
 /* Smooth theme transitions on interactive elements only */

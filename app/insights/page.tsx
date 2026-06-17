@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getLatestReport, getReportByWeek, listReportWeeks } from "@/lib/db/weekly-reports";
+import { getLatestDailySnapshots } from "@/lib/db/daily-snapshots";
 import { InsightsClient } from "@/app/insights/insights-client";
 
 export const dynamic = "force-dynamic";
@@ -29,5 +30,20 @@ export default async function InsightsPage({
     report = await getLatestReport();
   }
 
-  return <InsightsClient report={report} availableWeeks={availableWeeks} userEmail={user.email ?? ""} />;
+  // Fetch daily "this week so far" snapshots (non-blocking — empty if not yet run).
+  let dailySnapshots: Awaited<ReturnType<typeof getLatestDailySnapshots>> = [];
+  try {
+    dailySnapshots = await getLatestDailySnapshots();
+  } catch {
+    // Migration not applied yet or table absent — safe to show empty strip.
+  }
+
+  return (
+    <InsightsClient
+      report={report}
+      availableWeeks={availableWeeks}
+      userEmail={user.email ?? ""}
+      dailySnapshots={dailySnapshots}
+    />
+  );
 }

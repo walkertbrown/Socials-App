@@ -10,8 +10,18 @@ export async function generateGeminiImage(input: {
   prompt: string;
   format: "feed" | "story";
 }): Promise<{ pngBase64: string }> {
-  const apiKey = process.env.GOOGLE_AI_API_KEY;
-  if (!apiKey) throw new Error("GOOGLE_AI_API_KEY is missing");
+  // Accept whichever common name the Gemini key was saved under — Google AI
+  // Studio keys get named several ways in the wild, so we check all of them.
+  const apiKey =
+    process.env.GOOGLE_AI_API_KEY ||
+    process.env.GEMINI_API_KEY ||
+    process.env.GOOGLE_GENERATIVE_AI_API_KEY ||
+    process.env.GOOGLE_API_KEY;
+  if (!apiKey) {
+    throw new Error(
+      "Gemini API key is missing (set GOOGLE_AI_API_KEY or GEMINI_API_KEY)"
+    );
+  }
 
   const ai = new GoogleGenAI({ apiKey });
 

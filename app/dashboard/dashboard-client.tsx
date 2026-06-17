@@ -5,7 +5,7 @@ import { AppShell } from "@/components/app-shell";
 import { ScreenEyebrow } from "@/components/screen-eyebrow";
 import { OverviewCards } from "@/components/dashboard/overview-cards";
 import { useTheme } from "@/components/theme-provider";
-import { Sun, Moon, LogOut } from "lucide-react";
+import { Sun, Moon, LogOut, MessageCircle } from "lucide-react";
 import type { DashboardSummary } from "@/lib/db/dashboard-summary";
 
 interface DashboardClientProps {
@@ -19,8 +19,16 @@ export function DashboardClient({ summary, userEmail: _userEmail }: DashboardCli
   return (
     <AppShell>
       <main className="mx-auto flex w-full max-w-xl flex-1 flex-col px-4 pt-10 pb-4">
-        {/* Top-right controls: sign out + theme toggle */}
+        {/* Top-right controls: messages + sign out + theme toggle */}
         <div className="mb-8 flex items-center justify-end gap-3">
+          <Link
+            href="/messages"
+            aria-label="DM Inbox"
+            className="flex items-center justify-center rounded-full p-2"
+            style={{ color: "var(--text-dim)", background: "var(--surface-hi)", border: "1px solid var(--border)" }}
+          >
+            <MessageCircle size={14} strokeWidth={1.8} />
+          </Link>
           <button
             onClick={toggleTheme}
             aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}

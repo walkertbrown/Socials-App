@@ -70,6 +70,51 @@ export async function refreshHashtagVocab(): Promise<void> {
   }
 }
 
+// Return the top N tags ranked by perf_score (nulls last), use_count as tiebreaker.
+// Used in the hashtag panel's "Proven for you" group.
+// Category-specific first, topped up with global rows if thin.
+export async function getReachRankedHashtags(
+  category?: string | null,
+  n: number = PROMPT_TAG_CAP
+): Promise<string[]> {
+  const cap = Math.min(n, PROMPT_TAG_CAP);
+  const sb = createAdminClient();
+
+  let rows: { tag: string }[] = [];
+
+  // Category-specific first — order by perf_score desc (nulls last), then use_count desc.
+  if (category) {
+    const { data } = await sb
+      .from("hashtag_vocab")
+      .select("tag")
+      .eq("category", category)
+      .order("perf_score", { ascending: false, nullsFirst: false })
+      .order("use_count", { ascending: false })
+      .limit(cap);
+    rows = data ?? [];
+  }
+
+  // Top-up with global rows if category didn't fill the cap.
+  if (rows.length < cap) {
+    const { data } = await sb
+      .from("hashtag_vocab")
+      .select("tag")
+      .is("category", null)
+      .order("perf_score", { ascending: false, nullsFirst: false })
+      .order("use_count", { ascending: false })
+      .limit(cap);
+
+    const existing = new Set(rows.map((r) => r.tag));
+    for (const r of data ?? []) {
+      if (!existing.has(r.tag) && rows.length < cap) {
+        rows.push(r);
+      }
+    }
+  }
+
+  return rows.map((r) => r.tag);
+}
+
 // Return the top N tags for a given category (falls back to global if thin).
 // Used in the caption prompt so the model prefers real tags she actually uses.
 export async function getTopHashtags(

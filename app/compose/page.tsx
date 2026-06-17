@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getReadyPhotos, getReadyVideos, batchSignThumbnails } from "@/lib/db/photos";
 import { listGraphics } from "@/lib/db/graphics";
+import { getReachRankedHashtags } from "@/lib/learn/hashtag-vocab";
 import { ComposeClient } from "@/app/compose/compose-client";
 
 export const dynamic = "force-dynamic";
@@ -18,10 +19,11 @@ export default async function ComposePage({
   if (!user) redirect("/login");
 
   const params = await searchParams;
-  const [photos, videos, graphics] = await Promise.all([
+  const [photos, videos, graphics, provenTags] = await Promise.all([
     getReadyPhotos(),
     getReadyVideos(),
     listGraphics(),
+    getReachRankedHashtags(null, 20).catch(() => [] as string[]),
   ]);
 
   const allPhotos = [...photos, ...videos];
@@ -39,6 +41,7 @@ export default async function ComposePage({
     <ComposeClient
       photos={photosWithUrls}
       graphics={graphics}
+      provenTags={provenTags}
       preselectedGraphicId={params.graphicId ?? null}
       preselectedPhotoIds={preselectedPhotoIds}
       userEmail={user.email ?? ""}

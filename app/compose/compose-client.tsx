@@ -1,5 +1,4 @@
 "use client";
-
 // New post composer — sub-screen of Studio (back arrow, no bottom tab here).
 // Wraps in AppShell so the bottom tab bar is still visible for navigation.
 
@@ -12,26 +11,23 @@ import { PhotoPicker } from "@/components/photo-picker";
 import { PlatformSchedule, type PlatformItem } from "@/components/platform-schedule";
 import { MediaModePicker } from "@/components/compose/media-mode-picker";
 import { IntentSearch } from "@/components/compose/intent-search";
+import { CaptionBox } from "@/components/compose/caption-box";
+import { HashtagPanel } from "@/components/compose/hashtag-panel";
+import { VideoModeSection } from "@/components/compose/video-mode-section";
 import { centralToUtcIso } from "@/lib/time";
-
-function makeItems(when: string, delivery: "auto" | "reminder"): PlatformItem[] {
-  return ["instagram", "facebook"].map((p) => ({
-    platform: p,
-    scheduled_at: when,
-    delivery,
-    overridden: false,
-  }));
-}
+import { PIN, makeItems, splitCaptionAndTags } from "@/lib/compose-helpers";
 
 export function ComposeClient({
   photos,
   graphics = [],
+  provenTags = [],
   preselectedGraphicId = null,
   preselectedPhotoIds = [],
   userEmail: _userEmail = "",
 }: {
   photos: Photo[];
   graphics?: Graphic[];
+  provenTags?: string[];
   preselectedGraphicId?: string | null;
   preselectedPhotoIds?: string[];
   userEmail?: string;
@@ -51,6 +47,7 @@ export function ComposeClient({
   const [matchedIds, setMatchedIds] = useState<string[] | null>(null);
   const [searching, setSearching] = useState(false);
   const [caption, setCaption] = useState("");
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [aiDraft, setAiDraft] = useState<string | null>(null);
   const [drafting, setDrafting] = useState(false);
   const [sharedWhen, setSharedWhen] = useState("");
@@ -129,7 +126,25 @@ export function ComposeClient({
       });
       const d = await res.json();
       if (!res.ok) throw new Error(d.error || "Failed");
-      setAiDraft(d.caption); setCaption(d.caption);
+
+      // Strip hashtags from the AI caption and seed them into the hashtag panel.
+      // The caption box stays clean; tags aren't duplicated.
+      const { body, tags } = splitCaptionAndTags(d.caption);
+      setCaption(body);
+      setAiDraft(d.caption); // preserve original for learning loop
+
+      // Merge new AI tags into existing selected tags (dedupe, case-insensitive).
+      setSelectedTags((prev) => {
+        const existing = new Set(prev.map((t) => t.toLowerCase()));
+        const merged = [...prev];
+        for (const tag of tags) {
+          if (!existing.has(tag) && tag !== PIN.toLowerCase()) {
+            merged.push(tag);
+            existing.add(tag);
+          }
+        }
+        return merged;
+      });
     } catch { setMsg("Couldn't draft a caption — try again."); }
     setDrafting(false);
   }
@@ -144,10 +159,18 @@ export function ComposeClient({
       const postGroupId = crypto.randomUUID();
       const mediaType = mediaMode === "graphic" ? "graphic" : isVideo ? "video" : isCarousel ? "carousel" : "image";
       const mediaId = mediaMode === "graphic" ? selectedGraphicId! : selectedIds[0];
+
+      // Merge caption + selected tags into the final caption string.
+      // Pin is always first; user-selected tags follow (space-separated).
+      const tagLine = [PIN, ...selectedTags].join(" ");
+      const finalCaption = caption.trim()
+        ? `${caption.trim()}\n\n${tagLine}`
+        : tagLine;
+
       const payload = {
         photo_id: mediaId,
         ...(isCarousel ? { photo_ids: selectedIds } : {}),
-        caption,
+        caption: finalCaption,
         ai_draft: aiDraft ?? undefined,
         media_type: mediaType,
         post_group_id: postGroupId,
@@ -172,6 +195,8 @@ export function ComposeClient({
       setSaving(false);
     }
   }
+
+  const captionStepNum = mediaMode === "graphic" ? 2 : 4;
 
   return (
     <AppShell>
@@ -231,43 +256,35 @@ export function ComposeClient({
         )}
 
         {/* Caption */}
+        <CaptionBox
+          caption={caption}
+          mediaMode={mediaMode}
+          selectedIds={selectedIds}
+          drafting={drafting}
+          stepNumber={captionStepNum}
+          onChange={setCaption}
+          onDraft={draft}
+        />
+
+        {/* Hashtag panel */}
         <section>
-          <div className="mb-2 flex items-center justify-between">
-            <p className="text-sm font-medium" style={{ color: "var(--text-secondary)" }}>
-              {mediaMode === "graphic" ? "2" : "4"}. Caption
-            </p>
-            <button onClick={draft} disabled={mediaMode !== "photo" || selectedIds.length === 0 || drafting}
-              className="btn-teal rounded px-3 py-1 text-sm font-medium">
-              {drafting ? "Writing…" : "Draft with AI"}
-            </button>
-          </div>
-          <textarea value={caption} onChange={(e) => setCaption(e.target.value)} rows={4}
-            placeholder="Write a caption, or click Draft with AI…"
-            className="w-full rounded p-2 text-sm"
-            style={{ border: "1px solid var(--border-hi)", background: "var(--surface-hi)", color: "var(--text-primary)" }} />
+          <p className="mb-2 text-sm font-medium" style={{ color: "var(--text-secondary)" }}>
+            {captionStepNum + 1}. Hashtags
+          </p>
+          <HashtagPanel
+            provenTags={provenTags}
+            photoId={selectedIds[0] ?? null}
+            caption={caption}
+            selectedTags={selectedTags}
+            onSelectedTagsChange={setSelectedTags}
+          />
         </section>
 
         <PlatformSchedule items={items} sharedWhen={sharedWhen} onSharedWhenChange={handleSharedWhenChange}
           onItemChange={handleItemChange} onTogglePlatform={handleTogglePlatform} isVideo={isVideo} />
 
         {isVideo && selectedIds.length === 1 && (
-          <section>
-            <p className="mb-2 text-sm font-medium" style={{ color: "var(--text-secondary)" }}>Video publish mode</p>
-            <div className="flex gap-2">
-              {(["auto", "reminder"] as const).map((d) => (
-                <button key={d} type="button" onClick={() => handleDeliveryChange(d)}
-                  className="rounded-full px-4 py-1.5 text-sm transition-colors"
-                  style={delivery === d ? { background: "var(--gold)", color: "var(--on-accent)" } : { background: "var(--surface-hi)", color: "var(--text-secondary)" }}>
-                  {d === "auto" ? "Post it for me (Reel)" : "Remind me"}
-                </button>
-              ))}
-            </div>
-            {delivery === "reminder" && (
-              <p className="mt-1 text-xs" style={{ color: "var(--text-secondary)" }}>
-                We will ping your phone at the scheduled time so you can add trending audio and post it yourself.
-              </p>
-            )}
-          </section>
+          <VideoModeSection delivery={delivery} onDeliveryChange={handleDeliveryChange} />
         )}
 
         {msg && <p className="text-sm" style={{ color: "var(--red)" }}>{msg}</p>}

@@ -11,8 +11,9 @@
 //   "ready"     → answers submitted (or none to ask); Generate button shows
 //   "results"   → images returned from both models
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { Question, Answer } from "./clarifying-questions";
+import { loadDraft, saveDraft, clearDraft } from "./create-draft";
 
 export interface GenerateResult {
   model: string;
@@ -57,6 +58,56 @@ export function useCreateGraphic() {
   const [saving, setSaving] = useState(false);
   const [savedId, setSavedId] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
+
+  // ── Draft persistence (survive refresh / accidental tab close) ──────────────
+  // Restore on mount, save on every change. `hydrated` is state (not a ref) so
+  // the save effect only runs AFTER the restore, never clobbering saved data
+  // with empty defaults. See create-draft.ts for what's persisted (and why the
+  // heavy result images are not).
+  const [hydrated, setHydrated] = useState(false);
+
+  useEffect(() => {
+    const d = loadDraft();
+    if (d) {
+      setPromptRaw(d.prompt);
+      setFormat(d.format);
+      setQuestions(d.questions);
+      setAnswers(d.answers);
+      setCachedEnhancedPrompt(d.cachedEnhancedPrompt);
+      setCachedForPrompt(d.cachedForPrompt);
+      setCachedForAnswers(d.cachedForAnswers);
+      setPhase(d.phase);
+    }
+    setHydrated(true);
+  }, []);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    if (!prompt.trim()) {
+      clearDraft(); // nothing worth keeping once the prompt is empty
+      return;
+    }
+    saveDraft({
+      prompt,
+      format,
+      phase: phase === "results" ? "ready" : phase,
+      questions,
+      answers,
+      cachedEnhancedPrompt,
+      cachedForPrompt,
+      cachedForAnswers,
+    });
+  }, [
+    hydrated,
+    prompt,
+    format,
+    phase,
+    questions,
+    answers,
+    cachedEnhancedPrompt,
+    cachedForPrompt,
+    cachedForAnswers,
+  ]);
 
   // ── Prompt change ─────────────────────────────────────────────────────────
   // Editing the prompt text resets the questions phase.

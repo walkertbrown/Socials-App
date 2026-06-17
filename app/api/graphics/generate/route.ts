@@ -28,10 +28,11 @@ function checkAndIncrementCap(): boolean {
 }
 
 // ── Route handler ─────────────────────────────────────────────────────────────
-// Body: { prompt: string, format: "feed"|"story", enhancedPrompt?: string }
+// Body: { prompt: string, format: "feed"|"story", enhancedPrompt?: string,
+//         answers?: { question: string; answer: string }[] }
 //
 // Cost guard: if the client sends back the enhancedPrompt from a prior call with
-// the same text, we skip the Sonnet enhancement step.
+// the same text AND the same answers, we skip the Sonnet enhancement step.
 //
 // Both model calls run in parallel via Promise.allSettled so one failure does
 // not kill the other.
@@ -49,7 +50,7 @@ export async function POST(request: NextRequest) {
   }
 
   const body = await request.json();
-  const { prompt, format, enhancedPrompt: cachedEnhanced } = body;
+  const { prompt, format, enhancedPrompt: cachedEnhanced, answers: rawAnswers } = body;
 
   if (typeof prompt !== "string" || !prompt.trim()) {
     return NextResponse.json({ error: "prompt is required" }, { status: 400 });
@@ -57,6 +58,18 @@ export async function POST(request: NextRequest) {
 
   const resolvedFormat: "feed" | "story" =
     format === "story" ? "story" : "feed";
+
+  // Validate and sanitize the optional answers array.
+  // Malformed entries are silently dropped rather than erroring the whole request.
+  const answers: { question: string; answer: string }[] = Array.isArray(rawAnswers)
+    ? rawAnswers.filter(
+        (a): a is { question: string; answer: string } =>
+          typeof a === "object" &&
+          a !== null &&
+          typeof a.question === "string" &&
+          typeof a.answer === "string"
+      )
+    : [];
 
   // Reuse the client-cached enhanced prompt when available to skip Sonnet.
   let enhancedPromptText: string;
@@ -67,6 +80,7 @@ export async function POST(request: NextRequest) {
       enhancedPromptText = await enhancePrompt({
         prompt: prompt.trim(),
         format: resolvedFormat,
+        answers: answers.length > 0 ? answers : undefined,
       });
     } catch (e) {
       return NextResponse.json(

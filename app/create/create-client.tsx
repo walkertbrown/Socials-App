@@ -1,14 +1,18 @@
 "use client";
 
-// Create Graphic screen — renders the prompt, clarifying-questions, results,
-// and overlay/save sections.  All state and async logic live in useCreateGraphic.
+// Create Graphic screen — sub-screen of Studio (back arrow, bottom tab stays).
+// Renders the prompt, clarifying-questions, results, and overlay/save sections.
+// All state and async logic live in useCreateGraphic.
 //
 // Flow:
 //   1. "prompt" phase  → user types, presses Enter or "Continue" → fetchQuestions
-//   2. "questions" phase → answers optional questions → "Generate"
-//   3. "results" phase  → two images; pick one → overlay → save
+//   2. "questions" phase → answers optional questions → "Submit answers"
+//   3. "ready" phase   → "Generate" → call image models
+//   4. "results" phase → two images; pick one → overlay → save
 
-import { AppHeader } from "@/components/app-header";
+import { useRouter } from "next/navigation";
+import { ArrowLeft } from "lucide-react";
+import { AppShell } from "@/components/app-shell";
 import { ClarifyingQuestions } from "./clarifying-questions";
 import { ResultsGallery } from "./results-gallery";
 import { OverlaySaveSection } from "./overlay-save-section";
@@ -23,7 +27,8 @@ const MODEL_LABEL: Record<string, string> = {
   "gpt-image-2": "GPT Image 2",
 };
 
-export function CreateClient({ userEmail = "" }: CreateClientProps) {
+export function CreateClient({ userEmail: _userEmail = "" }: CreateClientProps) {
+  const router = useRouter();
   const {
     prompt,
     setPrompt,
@@ -78,19 +83,22 @@ export function CreateClient({ userEmail = "" }: CreateClientProps) {
       : loadingQuestions || generating || !prompt.trim();
 
   return (
-    <div className="flex flex-1 flex-col">
-      <AppHeader userEmail={userEmail} />
-      <div className="mx-auto flex w-full max-w-4xl flex-col gap-5 p-4">
+    <AppShell>
+      <div className="mx-auto flex w-full max-w-xl flex-1 flex-col gap-5 px-4 pt-6 pb-4">
 
-        {/* ── Header ── */}
-        <div className="flex items-center justify-between">
-          <h1
-            className="text-lg"
-            style={{ fontFamily: "var(--font-serif)", fontWeight: 600, color: "var(--text-primary)" }}
-          >
-            Create Graphic
-          </h1>
-        </div>
+        {/* Back arrow — sub-screen of Studio */}
+        <button
+          onClick={() => router.back()}
+          className="flex items-center gap-1.5 self-start text-sm transition-opacity hover:opacity-70"
+          style={{ color: "var(--text-dim)", background: "none", border: "none" }}
+        >
+          <ArrowLeft size={16} strokeWidth={1.8} />
+          Studio
+        </button>
+
+        <h1 className="text-2xl tracking-tight" style={{ fontFamily: "var(--font-serif)", fontWeight: 500, color: "var(--text-primary)" }}>
+          Create graphic
+        </h1>
 
         {/* ── Prompt + format + primary CTA ── */}
         <section className="flex flex-col gap-3">
@@ -124,7 +132,7 @@ export function CreateClient({ userEmail = "" }: CreateClientProps) {
                   className="rounded-full px-4 py-1.5 text-sm transition-colors"
                   style={
                     format === f
-                      ? { background: "var(--gold)", color: "var(--bg)" }
+                      ? { background: "var(--gold)", color: "var(--on-accent)" }
                       : { background: "var(--surface-hi)", color: "var(--text-secondary)" }
                   }
                 >
@@ -136,7 +144,7 @@ export function CreateClient({ userEmail = "" }: CreateClientProps) {
               onClick={handlePrimaryClick}
               disabled={primaryDisabled}
               className="ml-auto rounded-md px-5 py-2 text-sm font-medium transition-colors hover:opacity-90 disabled:opacity-40"
-              style={{ background: "var(--gold)", color: "var(--bg)" }}
+              style={{ background: "var(--gold)", color: "var(--on-accent)" }}
             >
               {primaryLabel()}
             </button>
@@ -208,6 +216,6 @@ export function CreateClient({ userEmail = "" }: CreateClientProps) {
         )}
 
       </div>
-    </div>
+    </AppShell>
   );
 }

@@ -1,17 +1,19 @@
 "use client";
 
+// New post composer — sub-screen of Studio (back arrow, no bottom tab here).
+// Wraps in AppShell so the bottom tab bar is still visible for navigation.
+
 import { useState, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
-import { AppHeader } from "@/components/app-header";
+import { ArrowLeft } from "lucide-react";
+import { AppShell } from "@/components/app-shell";
 import type { Photo, Graphic } from "@/lib/types";
 import { PhotoPicker } from "@/components/photo-picker";
 import { PlatformSchedule, type PlatformItem } from "@/components/platform-schedule";
+import { MediaModePicker } from "@/components/compose/media-mode-picker";
+import { IntentSearch } from "@/components/compose/intent-search";
 import { centralToUtcIso } from "@/lib/time";
 
-const QUICK_TAGS = ["staff", "cocktails", "food", "patio", "events", "wine"];
-
-// Build the initial items array (both platforms, shared time, not overridden).
 function makeItems(when: string, delivery: "auto" | "reminder"): PlatformItem[] {
   return ["instagram", "facebook"].map((p) => ({
     platform: p,
@@ -26,7 +28,7 @@ export function ComposeClient({
   graphics = [],
   preselectedGraphicId = null,
   preselectedPhotoIds = [],
-  userEmail = "",
+  userEmail: _userEmail = "",
 }: {
   photos: Photo[];
   graphics?: Graphic[];
@@ -37,29 +39,21 @@ export function ComposeClient({
   const router = useRouter();
   const [selectedGraphicId, setSelectedGraphicId] = useState<string | null>(preselectedGraphicId);
   const [selectedIds, setSelectedIds] = useState<string[]>(preselectedPhotoIds);
-
-  // If a graphicId was passed from /create, default to "graphic" media mode.
   const [mediaMode, setMediaMode] = useState<"photo" | "graphic">(
     preselectedGraphicId ? "graphic" : "photo"
   );
 
-  // Sync if the preselected graphic changes (e.g. navigation).
   useEffect(() => {
-    if (preselectedGraphicId) {
-      setSelectedGraphicId(preselectedGraphicId);
-      setMediaMode("graphic");
-    }
+    if (preselectedGraphicId) { setSelectedGraphicId(preselectedGraphicId); setMediaMode("graphic"); }
   }, [preselectedGraphicId]);
+
   const [intent, setIntent] = useState("");
   const [matchedIds, setMatchedIds] = useState<string[] | null>(null);
   const [searching, setSearching] = useState(false);
   const [caption, setCaption] = useState("");
-  // aiDraft holds the exact AI-generated text. It's set once on "Draft with AI"
-  // and never overwritten by her edits — so we can diff draft vs final later.
   const [aiDraft, setAiDraft] = useState<string | null>(null);
   const [drafting, setDrafting] = useState(false);
   const [sharedWhen, setSharedWhen] = useState("");
-  // ONE auto/remind toggle for the whole post.
   const [delivery, setDelivery] = useState<"auto" | "reminder">("auto");
   const [items, setItems] = useState<PlatformItem[]>(makeItems("", "auto"));
   const [saving, setSaving] = useState(false);
@@ -68,56 +62,37 @@ export function ComposeClient({
   const primaryPhoto = photos.find((p) => p.id === selectedIds[0]);
   const isVideo = primaryPhoto?.category === "videos";
   const isCarousel = selectedIds.length > 1;
-  const selectedGraphic = graphics.find((g) => g.id === selectedGraphicId);
 
-  // When photos are selected, sync delivery mode. Multi-select = carousel (images only).
-  const handleSelect = useCallback(
-    (ids: string[]) => {
-      setSelectedIds(ids);
-      if (ids.length === 1) {
-        const photo = photos.find((p) => p.id === ids[0]);
-        const defaultDelivery = photo?.category === "videos" ? "auto" : "auto";
-        setDelivery(defaultDelivery);
-        setItems((prev) => prev.map((item) => ({ ...item, delivery: defaultDelivery })));
-      }
-    },
-    [photos]
-  );
+  const handleSelect = useCallback((ids: string[]) => {
+    setSelectedIds(ids);
+    if (ids.length === 1) {
+      setDelivery("auto");
+      setItems((prev) => prev.map((item) => ({ ...item, delivery: "auto" })));
+    }
+  }, []);
 
-  // Shared time change: only update items that have NOT been individually overridden.
   function handleSharedWhenChange(when: string) {
     setSharedWhen(when);
-    setItems((prev) =>
-      prev.map((item) => (item.overridden ? item : { ...item, scheduled_at: when }))
-    );
+    setItems((prev) => prev.map((item) => (item.overridden ? item : { ...item, scheduled_at: when })));
   }
 
-  // Per-platform override: mark as overridden so shared changes don't clobber it.
   function handleItemChange(platform: string, when: string) {
-    setItems((prev) =>
-      prev.map((item) =>
-        item.platform === platform ? { ...item, scheduled_at: when, overridden: true } : item
-      )
-    );
+    setItems((prev) => prev.map((item) =>
+      item.platform === platform ? { ...item, scheduled_at: when, overridden: true } : item
+    ));
   }
 
-  // Toggle a platform on/off.
   function handleTogglePlatform(platform: string) {
     setItems((prev) => {
       const exists = prev.find((i) => i.platform === platform);
       if (exists) {
-        // Must keep at least one platform.
         if (prev.length <= 1) return prev;
         return prev.filter((i) => i.platform !== platform);
       }
-      return [
-        ...prev,
-        { platform, scheduled_at: sharedWhen, delivery, overridden: false },
-      ];
+      return [...prev, { platform, scheduled_at: sharedWhen, delivery, overridden: false }];
     });
   }
 
-  // Delivery toggle change: update all items.
   function handleDeliveryChange(d: "auto" | "reminder") {
     setDelivery(d);
     setItems((prev) => prev.map((item) => ({ ...item, delivery: d })));
@@ -139,21 +114,13 @@ export function ComposeClient({
       if (!res.ok) throw new Error(d.error || "Failed");
       setMatchedIds(d.ids ?? []);
       setSelectedIds([]);
-    } catch {
-      setMsg("Couldn't search photos — try again.");
-    }
+    } catch { setMsg("Couldn't search photos — try again."); }
     setSearching(false);
-  }
-
-  function clearSearch() {
-    setIntent("");
-    setMatchedIds(null);
   }
 
   async function draft() {
     if (!selectedIds[0]) return setMsg("Pick a photo first.");
-    setDrafting(true);
-    setMsg(null);
+    setDrafting(true); setMsg(null);
     try {
       const res = await fetch("/api/posts/draft-caption", {
         method: "POST",
@@ -162,32 +129,23 @@ export function ComposeClient({
       });
       const d = await res.json();
       if (!res.ok) throw new Error(d.error || "Failed");
-      // Store draft separate from caption so edits don't overwrite the AI original.
-      setAiDraft(d.caption);
-      setCaption(d.caption);
-    } catch {
-      setMsg("Couldn't draft a caption — try again.");
-    }
+      setAiDraft(d.caption); setCaption(d.caption);
+    } catch { setMsg("Couldn't draft a caption — try again."); }
     setDrafting(false);
   }
 
   async function schedule() {
-    // For graphic mode, require a graphic selection.
-    if (mediaMode === "graphic" && !selectedGraphicId) {
-      return setMsg("Pick a saved graphic first.");
-    }
+    if (mediaMode === "graphic" && !selectedGraphicId) return setMsg("Pick a saved graphic first.");
     if (mediaMode === "photo" && selectedIds.length === 0) return setMsg("Pick a photo or video first.");
     if (!items.length) return setMsg("Pick at least one platform.");
     if (items.some((i) => !i.scheduled_at)) return setMsg("Set a time for each platform.");
-    setSaving(true);
-    setMsg(null);
+    setSaving(true); setMsg(null);
     try {
       const postGroupId = crypto.randomUUID();
       const mediaType = mediaMode === "graphic" ? "graphic" : isVideo ? "video" : isCarousel ? "carousel" : "image";
       const mediaId = mediaMode === "graphic" ? selectedGraphicId! : selectedIds[0];
       const payload = {
         photo_id: mediaId,
-        // For carousels, also send the full ordered array.
         ...(isCarousel ? { photo_ids: selectedIds } : {}),
         caption,
         ai_draft: aiDraft ?? undefined,
@@ -216,256 +174,112 @@ export function ComposeClient({
   }
 
   return (
-    <div className="flex flex-1 flex-col">
-      <AppHeader userEmail={userEmail} />
-      <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-5 p-4">
-      <div className="flex items-center justify-between">
-        <h1
-          className="text-lg"
-          style={{ fontFamily: "var(--font-serif)", fontWeight: 600, color: "var(--text-primary)" }}
+    <AppShell>
+      <div className="mx-auto flex w-full max-w-xl flex-1 flex-col gap-5 px-4 pt-6 pb-4">
+        {/* Back arrow — this is a sub-screen of Studio */}
+        <button
+          onClick={() => router.back()}
+          className="flex items-center gap-1.5 self-start text-sm transition-opacity hover:opacity-70"
+          style={{ color: "var(--text-dim)", background: "none", border: "none" }}
         >
+          <ArrowLeft size={16} strokeWidth={1.8} />
+          Studio
+        </button>
+
+        <h1 className="text-2xl tracking-tight" style={{ fontFamily: "var(--font-serif)", fontWeight: 500, color: "var(--text-primary)" }}>
           New post
         </h1>
-      </div>
 
-      {/* Media mode: photo/video vs saved graphic */}
-      <section>
-        <p className="mb-2 text-sm font-medium" style={{ color: "var(--text-secondary)" }}>1. What are you posting?</p>
-        <div className="flex gap-2">
-          {(["photo", "graphic"] as const).map((m) => (
-            <button
-              key={m}
-              onClick={() => setMediaMode(m)}
-              className="rounded-full px-4 py-1.5 text-sm transition-colors"
-              style={
-                mediaMode === m
-                  ? { background: "var(--gold)", color: "var(--bg)" }
-                  : { background: "var(--surface-hi)", color: "var(--text-secondary)" }
-              }
-            >
-              {m === "photo" ? "Photo or Video" : "Saved Graphic"}
-            </button>
-          ))}
-        </div>
-      </section>
+        {/* 1. Media mode + graphic picker */}
+        <MediaModePicker
+          mediaMode={mediaMode}
+          onModeChange={setMediaMode}
+          graphics={graphics}
+          selectedGraphicId={selectedGraphicId}
+          onSelectGraphic={setSelectedGraphicId}
+        />
 
-      {/* Graphic picker */}
-      {mediaMode === "graphic" && (
-        <section>
-          <p className="mb-2 text-sm font-medium" style={{ color: "var(--text-secondary)" }}>2. Pick a saved graphic</p>
-          {graphics.length === 0 ? (
-            <p className="text-sm" style={{ color: "var(--text-dim)" }}>
-              No saved graphics yet.{" "}
-              <Link href="/create" className="underline" style={{ color: "var(--gold)" }}>Create one →</Link>
-            </p>
-          ) : (
-            <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
-              {graphics.map((g) => {
-                const sb = g.png_path
-                  ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/graphics/${g.png_path}`
-                  : null;
-                return (
-                  <button
-                    key={g.id}
-                    onClick={() => setSelectedGraphicId(g.id)}
-                    className="relative aspect-square overflow-hidden rounded-md border-2 transition-colors"
-                    style={{
-                      borderColor: selectedGraphicId === g.id ? "var(--gold)" : "transparent",
-                    }}
-                  >
-                    {sb ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={sb} alt="Graphic" className="h-full w-full object-cover" />
-                    ) : (
-                      <div
-                        className="flex h-full items-center justify-center text-xs"
-                        style={{ background: "var(--surface-hi)", color: "var(--text-dim)" }}
-                      >
-                        Graphic
-                      </div>
-                    )}
-                    <span className="absolute bottom-1 left-1 rounded bg-black/60 px-1 text-[10px] text-white">
-                      {g.size}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          )}
-          {selectedGraphic && (
-            <p className="mt-1 text-xs" style={{ color: "var(--text-dim)" }}>
-              Selected: {selectedGraphic.size} graphic from{" "}
-              {new Date(selectedGraphic.created_at).toLocaleDateString()}
-            </p>
-          )}
-        </section>
-      )}
+        {/* 2+3. Intent search + photo picker (photo mode only) */}
+        {mediaMode === "photo" && (
+          <>
+            <IntentSearch
+              intent={intent}
+              searching={searching}
+              matchedIds={matchedIds}
+              onIntentChange={setIntent}
+              onSearch={findPhotos}
+              onClear={() => { setIntent(""); setMatchedIds(null); }}
+            />
+            <section>
+              <div className="mb-2 flex items-center justify-between">
+                <p className="text-sm font-medium" style={{ color: "var(--text-secondary)" }}>
+                  3. Pick photo{isCarousel ? `s (${selectedIds.length} selected — carousel)` : " or video"}
+                </p>
+              </div>
+              <PhotoPicker photos={photos} selectedIds={selectedIds} onSelect={handleSelect} matchedIds={matchedIds} multi />
+            </section>
+          </>
+        )}
 
-      {/* Photo/video sections — only shown in photo mode */}
-      {mediaMode === "photo" && (
-        <>
-          {/* Intent search */}
+        {/* Video preview */}
+        {isVideo && selectedIds[0] && (
           <section>
-            <p className="mb-2 text-sm font-medium" style={{ color: "var(--text-secondary)" }}>2. What do you want to post about?</p>
+            <p className="mb-2 text-sm font-medium" style={{ color: "var(--text-secondary)" }}>Preview</p>
+            <video key={selectedIds[0]} src={`/api/videos/${selectedIds[0]}/download`} controls playsInline preload="metadata"
+              className="max-h-[60vh] max-w-full rounded bg-black" />
+          </section>
+        )}
+
+        {/* Caption */}
+        <section>
+          <div className="mb-2 flex items-center justify-between">
+            <p className="text-sm font-medium" style={{ color: "var(--text-secondary)" }}>
+              {mediaMode === "graphic" ? "2" : "4"}. Caption
+            </p>
+            <button onClick={draft} disabled={mediaMode !== "photo" || selectedIds.length === 0 || drafting}
+              className="rounded px-3 py-1 text-sm font-medium transition-opacity hover:opacity-90 disabled:opacity-40"
+              style={{ background: "var(--gold)", color: "var(--on-accent)" }}>
+              {drafting ? "Writing…" : "Draft with AI"}
+            </button>
+          </div>
+          <textarea value={caption} onChange={(e) => setCaption(e.target.value)} rows={4}
+            placeholder="Write a caption, or click Draft with AI…"
+            className="w-full rounded p-2 text-sm"
+            style={{ border: "1px solid var(--border-hi)", background: "var(--surface-hi)", color: "var(--text-primary)" }} />
+        </section>
+
+        <PlatformSchedule items={items} sharedWhen={sharedWhen} onSharedWhenChange={handleSharedWhenChange}
+          onItemChange={handleItemChange} onTogglePlatform={handleTogglePlatform} isVideo={isVideo} />
+
+        {isVideo && selectedIds.length === 1 && (
+          <section>
+            <p className="mb-2 text-sm font-medium" style={{ color: "var(--text-secondary)" }}>Video publish mode</p>
             <div className="flex gap-2">
-              <input
-                value={intent}
-                onChange={(e) => setIntent(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && findPhotos()}
-                placeholder="e.g. a post about the staff, this weekend, the BBQ shrimp…"
-                className="w-full rounded-md p-2 text-sm"
-                style={{
-                  border: "1px solid var(--border-hi)",
-                  background: "var(--surface-hi)",
-                  color: "var(--text-primary)",
-                }}
-              />
-              <button
-                onClick={() => findPhotos()}
-                disabled={searching}
-                className="shrink-0 rounded-md px-3 py-1 text-sm font-medium transition-colors hover:opacity-90 disabled:opacity-40"
-                style={{ background: "var(--gold)", color: "var(--bg)" }}
-              >
-                {searching ? "Finding…" : "Find photos"}
-              </button>
-            </div>
-            <div className="mt-2 flex flex-wrap gap-1.5">
-              {QUICK_TAGS.map((t) => (
-                <button
-                  key={t}
-                  onClick={() => findPhotos(t)}
-                  className="rounded-full px-3 py-1 text-xs capitalize transition-colors"
-                  style={{ background: "var(--surface-hi)", color: "var(--text-secondary)" }}
-                  onMouseEnter={(e) => (e.currentTarget.style.background = "var(--gold-dim)")}
-                  onMouseLeave={(e) => (e.currentTarget.style.background = "var(--surface-hi)")}
-                >
-                  {t}
+              {(["auto", "reminder"] as const).map((d) => (
+                <button key={d} type="button" onClick={() => handleDeliveryChange(d)}
+                  className="rounded-full px-4 py-1.5 text-sm transition-colors"
+                  style={delivery === d ? { background: "var(--gold)", color: "var(--on-accent)" } : { background: "var(--surface-hi)", color: "var(--text-secondary)" }}>
+                  {d === "auto" ? "Post it for me (Reel)" : "Remind me"}
                 </button>
               ))}
             </div>
-            <p className="mt-2 text-xs" style={{ color: "var(--text-dim)" }}>Optional — leave blank to browse everything.</p>
-          </section>
-
-          {/* Photo / video picker */}
-          <section>
-            <div className="mb-2 flex items-center justify-between">
-              <p className="text-sm font-medium" style={{ color: "var(--text-secondary)" }}>
-                3. Pick photo{isCarousel ? `s (${selectedIds.length} selected — carousel)` : " or video"}
+            {delivery === "reminder" && (
+              <p className="mt-1 text-xs" style={{ color: "var(--text-secondary)" }}>
+                We will ping your phone at the scheduled time so you can add trending audio and post it yourself.
               </p>
-              {matchedIds !== null && (
-                <button onClick={clearSearch} className="text-xs underline" style={{ color: "var(--text-dim)" }}>
-                  Showing matches{intent.trim() ? ` for "${intent.trim()}"` : ""} · clear
-                </button>
-              )}
-            </div>
-            <PhotoPicker
-              photos={photos}
-              selectedIds={selectedIds}
-              onSelect={handleSelect}
-              matchedIds={matchedIds}
-              multi
-            />
+            )}
           </section>
-        </>
-      )}
+        )}
 
-      {/* Video preview */}
-      {isVideo && selectedIds[0] && (
-        <section>
-          <p className="mb-2 text-sm font-medium" style={{ color: "var(--text-secondary)" }}>Preview</p>
-          <div className="flex justify-center">
-            <video
-              key={selectedIds[0]}
-              src={`/api/videos/${selectedIds[0]}/download`}
-              controls
-              playsInline
-              preload="metadata"
-              className="max-h-[60vh] max-w-full rounded-md bg-black"
-            />
-          </div>
-        </section>
-      )}
+        {msg && <p className="text-sm" style={{ color: "var(--red)" }}>{msg}</p>}
 
-      {/* Caption — section number is dynamic based on media mode */}
-      <section>
-        <div className="mb-2 flex items-center justify-between">
-          <p className="text-sm font-medium" style={{ color: "var(--text-secondary)" }}>
-            {mediaMode === "graphic" ? "2" : "4"}. Caption
-          </p>
-          {/* Draft with AI only available for photo posts (needs photo context) */}
-          <button
-            onClick={draft}
-            disabled={mediaMode !== "photo" || selectedIds.length === 0 || drafting}
-            className="rounded-md px-3 py-1 text-sm font-medium transition-colors hover:opacity-90 disabled:opacity-40"
-            style={{ background: "var(--gold)", color: "var(--bg)" }}
-          >
-            {drafting ? "Writing…" : "Draft with AI"}
-          </button>
-        </div>
-        <textarea
-          value={caption}
-          onChange={(e) => setCaption(e.target.value)}
-          rows={4}
-          placeholder="Write a caption, or click Draft with AI…"
-          className="w-full rounded-md p-2 text-sm"
-          style={{
-            border: "1px solid var(--border-hi)",
-            background: "var(--surface-hi)",
-            color: "var(--text-primary)",
-          }}
-        />
-      </section>
-
-      {/* 4+5. Platform + time (per-platform) */}
-      <PlatformSchedule
-        items={items}
-        sharedWhen={sharedWhen}
-        onSharedWhenChange={handleSharedWhenChange}
-        onItemChange={handleItemChange}
-        onTogglePlatform={handleTogglePlatform}
-        isVideo={isVideo}
-      />
-
-      {/* Video delivery toggle (whole-post, not per-platform) */}
-      {isVideo && selectedIds.length === 1 && (
-        <section>
-          <p className="mb-2 text-sm font-medium" style={{ color: "var(--text-secondary)" }}>Video publish mode</p>
-          <div className="flex gap-2">
-            {(["auto", "reminder"] as const).map((d) => (
-              <button
-                key={d}
-                type="button"
-                onClick={() => handleDeliveryChange(d)}
-                className="rounded-full px-4 py-1.5 text-sm transition-colors"
-                style={
-                  delivery === d
-                    ? { background: "var(--gold)", color: "var(--bg)" }
-                    : { background: "var(--surface-hi)", color: "var(--text-secondary)" }
-                }
-              >
-                {d === "auto" ? "Post it for me (Reel)" : "Remind me"}
-              </button>
-            ))}
-          </div>
-          {delivery === "reminder" && (
-            <p className="mt-1 text-xs" style={{ color: "var(--text-secondary)" }}>
-              We will ping your phone at the scheduled time so you can add trending audio and post it yourself.
-            </p>
-          )}
-        </section>
-      )}
-
-      {msg && <p className="text-sm" style={{ color: "var(--red)" }}>{msg}</p>}
-
-      <button
-        onClick={schedule}
-        disabled={saving}
-        className="rounded-md px-4 py-2.5 text-sm font-medium transition-colors hover:opacity-90 disabled:opacity-50"
-        style={{ background: "var(--green)", color: "#0a2d14" }}
-      >
-        {saving ? "Scheduling…" : "Schedule"}
-      </button>
-    </div>
-    </div>
+        {/* Full-width teal CTA */}
+        <button onClick={schedule} disabled={saving}
+          className="w-full rounded py-3 text-sm font-medium transition-opacity hover:opacity-90 disabled:opacity-50"
+          style={{ background: "var(--gold)", color: "var(--on-accent)" }}>
+          {saving ? "Scheduling…" : "Schedule post"}
+        </button>
+      </div>
+    </AppShell>
   );
 }

@@ -202,6 +202,41 @@ export async function setDisplayName(id: string, name: string): Promise<string> 
   return cleaned;
 }
 
+// ── Infographic-board helper ──────────────────────────────────────────────────
+
+// Insert a fully-processed photos row for a generated infographic so it appears
+// on the board immediately. drive_placed_at stays NULL so the external mirror job
+// picks it up and copies the MinIO original to Drive/06_Infographic.
+export async function insertReadyPhoto(row: {
+  object_key: string;
+  thumbnail_path: string;
+  post_ready_path: string;
+  display_name: string;
+  drive_name: string;
+  category: string;
+  tags: string[];
+}): Promise<string> {
+  const supabase = createAdminClient();
+  const { data, error } = await supabase
+    .from("photos")
+    .insert({
+      object_key: row.object_key,
+      thumbnail_path: row.thumbnail_path,
+      post_ready_path: row.post_ready_path,
+      display_name: row.display_name,
+      drive_name: row.drive_name,
+      category: row.category,
+      tags: row.tags,
+      storage_backend: "minio",
+      status: "ready",
+      drive_placed_at: null,
+    })
+    .select("id")
+    .single();
+  if (error) throw new Error(error.message);
+  return data.id as string;
+}
+
 // ── Upload-flow helpers ───────────────────────────────────────────────────────
 
 // Insert a placeholder row for a direct-to-MinIO upload in progress.

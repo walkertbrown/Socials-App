@@ -11,6 +11,7 @@ export const categoryToPrefix: Record<string, string> = {
   events: "EVNT",
   atmosphere: "ATMO",
   videos: "VID",
+  infographic: "INFO",
   unsorted: "UNSORTED",
 };
 

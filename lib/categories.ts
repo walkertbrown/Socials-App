@@ -6,6 +6,9 @@ export const CATEGORIES = [
   { key: "behind_scenes", label: "Behind the Scenes", match: /behind/i },
   { key: "events", label: "Events", match: /event/i },
   { key: "atmosphere", label: "Atmosphere", match: /atmosphere|atmos/i },
+  // In-app generated infographics — saved from the Create Graphic screen.
+  // Listed before unsorted so the board filter chip appears in a logical order.
+  { key: "infographic", label: "Infographic", match: /infographic/i },
   // Holding bin: where the AI sends anything it isn't confident about.
   { key: "unsorted", label: "Unsorted", match: /unsorted/i },
 ] as const;
@@ -43,8 +46,11 @@ export const FOLDER_TARGETS = [...CATEGORIES, VIDEO];
 
 export type CategoryKey = (typeof CATEGORIES)[number]["key"] | "videos";
 
-// The categories the AI is allowed to assign confidently (everything but the bin).
-export const SORTABLE = CATEGORIES.filter((c) => c.key !== "unsorted");
+// The categories the AI is allowed to assign confidently (everything but the bin and
+// infographic — the vision tagger should never output "infographic" for ordinary photos).
+export const SORTABLE = CATEGORIES.filter(
+  (c) => c.key !== "unsorted" && c.key !== "infographic"
+);
 
 export function isCategoryKey(value: string): value is CategoryKey {
   return FOLDER_TARGETS.some((c) => c.key === value);

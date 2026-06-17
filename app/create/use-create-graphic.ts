@@ -217,6 +217,7 @@ export function useCreateGraphic() {
           format,
           model: selectedModel,
           enhancedPrompt: cachedEnhancedPrompt,
+          prompt: prompt.trim(),
         }),
       });
       const d = await res.json();

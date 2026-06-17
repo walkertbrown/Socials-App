@@ -26,8 +26,13 @@ export async function POST() {
   // rclone copy preserves filenames but doesn't include non-media objects).
   const objects = await listObjects("");
 
-  // Only register image/video objects (skip any stray non-media keys).
-  const mediaObjects = objects.filter((o) => isMediaKey(o.key));
+  // Only register image/video objects (skip any stray non-media keys). Also skip
+  // the infographics/ prefix — those are finished, AI-generated board assets
+  // written directly as status="ready"; re-registering them as placeholders would
+  // wrongly queue them for vision processing and overwrite their ready status.
+  const mediaObjects = objects.filter(
+    (o) => isMediaKey(o.key) && !o.key.startsWith("infographics/")
+  );
 
   const filesNew = await insertMinioPlaceholders(
     mediaObjects.map((o) => ({

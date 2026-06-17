@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getUserOrNull } from "@/lib/auth/require-user";
 import { storeGraphicPng } from "@/lib/graphics/render/store-graphic";
 import { createGraphic } from "@/lib/db/graphics";
+import { publishInfographicToBoard } from "@/lib/graphics/publish-to-board";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
@@ -12,13 +13,13 @@ export const maxDuration = 30;
 // Cost guard: this is the ONLY route that writes to the bucket. The generate
 // route is transient — it never stores anything.
 //
-// Body: { pngBase64: string, format: "feed"|"story", model: string, enhancedPrompt: string }
+// Body: { pngBase64: string, format: "feed"|"story", model: string, enhancedPrompt: string, prompt: string }
 export async function POST(request: NextRequest) {
   const user = await getUserOrNull();
   if (!user) return new NextResponse("Unauthorized", { status: 401 });
 
   const body = await request.json();
-  const { pngBase64, format, model, enhancedPrompt } = body;
+  const { pngBase64, format, model, enhancedPrompt, prompt } = body;
 
   if (typeof pngBase64 !== "string" || !pngBase64) {
     return NextResponse.json({ error: "pngBase64 is required" }, { status: 400 });
@@ -58,5 +59,22 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });
   }
 
-  return NextResponse.json({ graphicId: graphic.id, url: storageResult.url });
+  // Also publish the infographic to the board so it appears under "Infographic".
+  // This is non-critical — a MinIO or storage failure must NOT fail the save response.
+  let boardPhotoId: string | null = null;
+  try {
+    boardPhotoId = await publishInfographicToBoard(
+      pngBuffer,
+      typeof prompt === "string" ? prompt.trim() : ""
+    );
+  } catch (e) {
+    // Log and continue — the graphics-table save + schedule link already succeeded.
+    console.error("[save] board publish failed:", (e as Error).message);
+  }
+
+  return NextResponse.json({
+    graphicId: graphic.id,
+    url: storageResult.url,
+    ...(boardPhotoId ? { boardPhotoId } : {}),
+  });
 }

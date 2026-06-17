@@ -57,6 +57,24 @@ export async function getSignedDownloadUrl(
   );
 }
 
+// Upload bytes from the server directly to MinIO. Used when the server has already
+// composed the file (e.g. an infographic PNG) and doesn't need a presigned URL.
+export async function putObjectBytes(
+  key: string,
+  body: Buffer,
+  contentType: string
+): Promise<void> {
+  const s3 = createS3Client();
+  await s3.send(
+    new PutObjectCommand({
+      Bucket: s3Bucket(),
+      Key: key,
+      Body: body,
+      ContentType: contentType,
+    })
+  );
+}
+
 // A short-lived presigned URL that lets the browser PUT a file directly to MinIO,
 // skipping the app server entirely. The browser includes Content-Type in the PUT
 // and MinIO enforces it (so we pass it here to match). TTL defaults to 15 minutes,

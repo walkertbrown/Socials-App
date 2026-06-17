@@ -12,6 +12,8 @@ import { ScreenEyebrow } from "@/components/screen-eyebrow";
 import type { WeekPayload } from "@/lib/report/compute-week";
 import type { DemographicsSnapshot } from "@/lib/meta/demographics";
 import { SnapshotBar } from "@/components/insights/snapshot-bar";
+import { ThisWeekSoFar } from "@/components/insights/this-week-so-far";
+import type { DailySnapshot } from "@/lib/db/daily-snapshots";
 import { FormatTable, TopPostList } from "@/components/insights/post-table";
 import { AudienceSnapshot } from "@/components/insights/audience-snapshot";
 import { TrendDisplay } from "@/components/insights/trend-chart";
@@ -21,9 +23,10 @@ interface InsightsClientProps {
   report: WeeklyReport | null;
   availableWeeks: string[];
   userEmail?: string;
+  dailySnapshots?: DailySnapshot[];
 }
 
-export function InsightsClient({ report, availableWeeks, userEmail: _userEmail = "" }: InsightsClientProps) {
+export function InsightsClient({ report, availableWeeks, userEmail: _userEmail = "", dailySnapshots = [] }: InsightsClientProps) {
   const router = useRouter();
   const [selectedWeek, setSelectedWeek] = useState(report?.week_start ?? "");
   const [isRegenerating, setIsRegenerating] = useState(false);
@@ -65,10 +68,11 @@ export function InsightsClient({ report, availableWeeks, userEmail: _userEmail =
   }
 
   // ── Empty state ─────────────────────────────────────────────────────────────
+  // Still render the "This week so far" strip even when no completed weekly report exists.
   if (!report || !payload) {
     return (
       <AppShell>
-        <div className="mx-auto flex w-full max-w-xl flex-1 flex-col p-4">
+        <div className="mx-auto flex w-full max-w-xl flex-1 flex-col gap-4 p-4">
           <div className="pt-6">
             <ScreenEyebrow label="REACH" title="Insights" />
           </div>
@@ -77,7 +81,8 @@ export function InsightsClient({ report, availableWeeks, userEmail: _userEmail =
             selectedWeek={selectedWeek}
             onWeekChange={handleWeekChange}
           />
-          <div className="flex flex-1 flex-col items-center justify-center py-24 text-center">
+          <ThisWeekSoFar snapshots={dailySnapshots} />
+          <div className="flex flex-col items-center py-12 text-center">
             <p className="text-base font-medium" style={{ color: "var(--text-primary)" }}>
               No weekly report yet.
             </p>
@@ -120,7 +125,10 @@ export function InsightsClient({ report, availableWeeks, userEmail: _userEmail =
           </div>
         )}
 
-        {/* Account snapshot */}
+        {/* This week so far — live daily numbers above the completed-week report */}
+        <ThisWeekSoFar snapshots={dailySnapshots} />
+
+        {/* Account snapshot — completed week */}
         <SnapshotBar ig={igSnap} fb={fbSnap} />
 
         {/* Trend */}

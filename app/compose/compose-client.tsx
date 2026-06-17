@@ -79,15 +79,11 @@ export function ComposeClient({
     ));
   }
 
-  function handleTogglePlatform(platform: string) {
-    setItems((prev) => {
-      const exists = prev.find((i) => i.platform === platform);
-      if (exists) {
-        if (prev.length <= 1) return prev;
-        return prev.filter((i) => i.platform !== platform);
-      }
-      return [...prev, { platform, scheduled_at: sharedWhen, delivery, overridden: false }];
-    });
+  function handleSetPlatforms(platforms: string[]) {
+    // Set platforms to exactly this selection (Both / IG / FB), keeping existing times.
+    setItems((prev) =>
+      platforms.map((p) => prev.find((i) => i.platform === p)
+        ?? { platform: p, scheduled_at: sharedWhen, delivery, overridden: false }));
   }
 
   function handleDeliveryChange(d: "auto" | "reminder") {
@@ -281,7 +277,7 @@ export function ComposeClient({
         </section>
 
         <PlatformSchedule items={items} sharedWhen={sharedWhen} onSharedWhenChange={handleSharedWhenChange}
-          onItemChange={handleItemChange} onTogglePlatform={handleTogglePlatform} isVideo={isVideo} />
+          onItemChange={handleItemChange} onSetPlatforms={handleSetPlatforms} isVideo={isVideo} />
 
         {isVideo && selectedIds.length === 1 && (
           <VideoModeSection delivery={delivery} onDeliveryChange={handleDeliveryChange} />

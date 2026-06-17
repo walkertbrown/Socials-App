@@ -24,41 +24,49 @@ interface Props {
   sharedWhen: string;
   onSharedWhenChange: (when: string) => void;
   onItemChange: (platform: string, when: string) => void;
-  onTogglePlatform: (platform: string) => void;
+  onSetPlatforms: (platforms: string[]) => void;
   isVideo: boolean;
 }
 
-const PLATFORMS = ["instagram", "facebook"];
+// The three "Where" choices. "Both" cross-posts (the default).
+const WHERE_OPTIONS = [
+  { key: "both", label: "Both", platforms: ["instagram", "facebook"] },
+  { key: "instagram", label: "Instagram", platforms: ["instagram"] },
+  { key: "facebook", label: "Facebook", platforms: ["facebook"] },
+];
 
 export function PlatformSchedule({
   items,
   sharedWhen,
   onSharedWhenChange,
   onItemChange,
-  onTogglePlatform,
+  onSetPlatforms,
   isVideo,
 }: Props) {
   const activePlatforms = new Set(items.map((i) => i.platform));
+  const igActive = activePlatforms.has("instagram");
+  const fbActive = activePlatforms.has("facebook");
+  const whereMode = igActive && fbActive ? "both" : fbActive ? "facebook" : "instagram";
 
   return (
     <div className="flex flex-col gap-3">
-      {/* Platform toggles */}
+      {/* Where — Both (cross-post) / Instagram / Facebook */}
       <div>
         <p className="mb-2 text-sm font-medium" style={{ color: "var(--text-secondary)" }}>4. Where</p>
         <div className="flex gap-2">
-          {PLATFORMS.map((p) => (
+          {WHERE_OPTIONS.map((o) => (
             <button
-              key={p}
+              key={o.key}
               type="button"
-              onClick={() => onTogglePlatform(p)}
-              className="rounded-full px-4 py-1.5 text-sm capitalize transition-colors"
+              onClick={() => onSetPlatforms(o.platforms)}
+              className="rounded-full px-4 py-1.5 text-sm transition-colors"
               style={
-                activePlatforms.has(p)
+                whereMode === o.key
                   ? { background: "var(--gold)", color: "var(--bg)" }
                   : { background: "var(--surface-hi)", color: "var(--text-secondary)" }
               }
             >
-              {p}
+              {o.label}
             </button>
           ))}
         </div>

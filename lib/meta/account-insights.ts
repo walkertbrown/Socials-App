@@ -14,9 +14,15 @@ const IG_ACCOUNT_METRICS = [
 ].join(",");
 
 // FB page-level metrics over a date window.
-// followers_count is a lifetime metric, fetched separately as a point-in-time snapshot.
+// ⚠️ 2026-06: Meta deprecated the page "impressions" family. As of the 2026-06-15
+// enforcement, `page_impressions_unique` returns "(#100) must be a valid insights metric"
+// — which threw the whole /insights call (and, per the old code structure, nulled
+// followers_count too). Impressions were replaced by "views"; `page_views_total` and
+// `page_post_engagements` are still VALID metric names. They legitimately return empty for
+// low-activity pages (this venue's FB page appears dormant), so reach/engagement may stay null.
+// followers_count is a lifetime field fetched separately (see below).
 const FB_PAGE_METRICS = [
-  "page_impressions_unique",
+  "page_views_total",
   "page_post_engagements",
 ].join(",");
 
@@ -133,6 +139,24 @@ export async function fetchFbPageInsights(
   since: number,
   until: number
 ): Promise<FbPageMetrics> {
+  // Fetch followers_count FIRST, in its own try — it's the one reliable FB number and must
+  // survive even if /insights throws (e.g. a deprecated metric). Previously this lived INSIDE
+  // the insights try-block, so a deprecated-metric error nulled followers too. (2026-06 fix.)
+  let followersCount: number | null = null;
+  try {
+    const pageData = await graph(pageId, {
+      token,
+      params: { fields: "followers_count" },
+    });
+    followersCount = safeInt(pageData.followers_count);
+  } catch {
+    // Non-fatal — followers_count stays null.
+  }
+
+  // Insights metrics (reach/engagement) — independent of the followers fetch above, so a
+  // deprecated/empty metric can never take followers_count down with it.
+  let reach: number | null = null;
+  let engagement: number | null = null;
   try {
     const data = await graph(`${pageId}/insights`, {
       token,
@@ -150,24 +174,13 @@ export async function fetchFbPageInsights(
       for (const m of data.data) byName[m.name] = m;
     }
 
-    // followers_count is a page-level field, not in /insights — fetch separately.
-    let followersCount: number | null = null;
-    try {
-      const pageData = await graph(pageId, {
-        token,
-        params: { fields: "followers_count" },
-      });
-      followersCount = safeInt(pageData.followers_count);
-    } catch {
-      // Non-fatal — FB demographics/follower data may be restricted
-    }
-
-    return {
-      reach: sumMetricValues(byName["page_impressions_unique"]),
-      engagement: sumMetricValues(byName["page_post_engagements"]),
-      followers_count: followersCount,
-    };
+    // reach now maps to page_views_total ("views" — Meta's impressions replacement).
+    reach = sumMetricValues(byName["page_views_total"]);
+    engagement = sumMetricValues(byName["page_post_engagements"]);
   } catch {
-    return { reach: null, engagement: null, followers_count: null };
+    // Insights metrics unavailable (deprecation / restriction) — reach/engagement stay null,
+    // but followers_count (fetched above) is unaffected.
   }
+
+  return { reach, engagement, followers_count: followersCount };
 }

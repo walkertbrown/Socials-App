@@ -2,6 +2,10 @@
 
 // ThemeProvider — manages dark/light toggle state and persists to localStorage.
 // Wrap the app in this so any component can call useTheme() to read or flip the theme.
+//
+// Bug fix vs v1: toggleTheme used to overwrite the entire <html> className, which
+// stripped the font variable classes injected by next/font. Now it only swaps
+// "dark"/"light" inside the existing className string, leaving everything else intact.
 
 import { createContext, useContext, useEffect, useState } from "react";
 
@@ -21,7 +25,15 @@ export function useTheme(): ThemeContextValue {
   return useContext(ThemeContext);
 }
 
-export function ThemeProvider({ children }: { children: React.ReactNode }) {
+// fontClasses is passed from layout.tsx so we can restore them if ever needed,
+// but primarily we preserve them by only swapping the theme token in-place.
+export function ThemeProvider({
+  children,
+  fontClasses: _fontClasses,
+}: {
+  children: React.ReactNode;
+  fontClasses?: string;
+}) {
   // Default to dark; the inline no-flash script in layout.tsx has already applied
   // the right class to <html> before React hydrates, so the initial read is correct.
   const [theme, setTheme] = useState<Theme>("dark");
@@ -38,8 +50,12 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     setTheme((prev) => {
       const next: Theme = prev === "dark" ? "light" : "dark";
       localStorage.setItem("theme", next);
-      // Apply the class immediately — don't wait for a re-render.
-      document.documentElement.className = next;
+      // Swap only the theme token — replace "dark"/"light" without touching font vars.
+      const el = document.documentElement;
+      el.className = el.className
+        .replace(/\b(dark|light)\b/g, "")
+        .trim()
+        .concat(" ", next);
       return next;
     });
   }

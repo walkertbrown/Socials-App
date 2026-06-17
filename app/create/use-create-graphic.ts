@@ -7,7 +7,8 @@
 //
 // Phase machine:
 //   "prompt"    → user is typing
-//   "questions" → clarifying questions loaded (may be empty array)
+//   "questions" → clarifying questions loaded; user is answering
+//   "ready"     → answers submitted (or none to ask); Generate button shows
 //   "results"   → images returned from both models
 
 import { useState } from "react";
@@ -31,9 +32,9 @@ export function useCreateGraphic() {
   const [prompt, setPromptRaw] = useState("");
   const [format, setFormat] = useState<"feed" | "story">("feed");
 
-  const [phase, setPhase] = useState<"prompt" | "questions" | "results">(
-    "prompt"
-  );
+  const [phase, setPhase] = useState<
+    "prompt" | "questions" | "ready" | "results"
+  >("prompt");
 
   // Clarifying-questions state.
   const [questions, setQuestions] = useState<Question[]>([]);
@@ -85,14 +86,28 @@ export function useCreateGraphic() {
       });
       const d = await res.json();
       if (!res.ok) throw new Error(d.error || "Failed to fetch questions");
-      setQuestions(d.questions ?? []);
-      setPhase("questions");
+      const qs = d.questions ?? [];
+      setQuestions(qs);
+      // If Sonnet had nothing to ask, skip straight to the Generate step.
+      setPhase(qs.length > 0 ? "questions" : "ready");
     } catch (e) {
       setQuestionsError((e as Error).message);
-      // Advance to "questions" phase so "Generate anyway" is visible.
-      setPhase("questions");
+      // A question hiccup must never block her — go straight to Generate.
+      setPhase("ready");
     }
     setLoadingQuestions(false);
+  }
+
+  // ── Submit answers ─────────────────────────────────────────────────────────
+  // Collapse the questions and reveal the Generate button. Answers can be empty
+  // (skippable) — submitting just advances the phase.
+  function submitAnswers() {
+    setPhase("ready");
+  }
+
+  // Go back from "ready" to edit the answers (only if there were questions).
+  function editAnswers() {
+    if (questions.length > 0) setPhase("questions");
   }
 
   // ── Generate ──────────────────────────────────────────────────────────────
@@ -180,6 +195,8 @@ export function useCreateGraphic() {
     loadingQuestions,
     questionsError,
     fetchQuestions,
+    submitAnswers,
+    editAnswers,
     // Generation
     generating,
     generateError,

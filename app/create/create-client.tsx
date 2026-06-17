@@ -37,6 +37,8 @@ export function CreateClient({ userEmail = "" }: CreateClientProps) {
     loadingQuestions,
     questionsError,
     fetchQuestions,
+    submitAnswers,
+    editAnswers,
     generating,
     generateError,
     results,
@@ -50,20 +52,31 @@ export function CreateClient({ userEmail = "" }: CreateClientProps) {
     handleSave,
   } = useCreateGraphic();
 
-  // The primary CTA label depends on the current phase.
+  // The primary CTA label + action depend on the current phase.
+  //   prompt    → "Continue"        → fetch questions
+  //   questions → "Submit answers"  → collapse questions, reveal Generate
+  //   ready     → "Generate"        → call both image models
+  //   results   → "Regenerate"      → call both image models again
   function primaryLabel() {
     if (phase === "prompt") {
       return loadingQuestions ? "Loading questions…" : "Continue";
     }
+    if (phase === "questions") return "Submit answers";
     return generating ? "Generating…" : results ? "Regenerate" : "Generate";
   }
 
   function handlePrimaryClick() {
     if (phase === "prompt") fetchQuestions();
+    else if (phase === "questions") submitAnswers();
     else generate();
   }
 
-  const primaryDisabled = loadingQuestions || generating || !prompt.trim();
+  // "Submit answers" is always allowed (answers are optional); Continue/Generate
+  // are blocked while a request is in flight or the prompt is empty.
+  const primaryDisabled =
+    phase === "questions"
+      ? false
+      : loadingQuestions || generating || !prompt.trim();
 
   return (
     <div className="flex flex-1 flex-col">
@@ -148,32 +161,31 @@ export function CreateClient({ userEmail = "" }: CreateClientProps) {
           )}
         </section>
 
-        {/* ── Clarifying questions ── */}
-        {phase !== "prompt" && (
-          <div className="flex flex-col gap-3">
-            {questionsError && (
-              <div className="flex flex-col gap-2">
-                <p className="text-sm" style={{ color: "var(--red)" }}>
-                  Could not load questions: {questionsError}
-                </p>
-                <button
-                  onClick={generate}
-                  disabled={generating}
-                  className="self-start rounded-md px-4 py-1.5 text-sm font-medium transition-colors hover:opacity-90 disabled:opacity-40"
-                  style={{ background: "var(--surface-hi)", color: "var(--text-secondary)", border: "1px solid var(--border-hi)" }}
-                >
-                  {generating ? "Generating…" : "Generate anyway"}
-                </button>
-              </div>
-            )}
-            {!questionsError && questions.length > 0 && (
-              <ClarifyingQuestions
-                questions={questions}
-                answers={answers}
-                onChange={setAnswers}
-              />
-            )}
-          </div>
+        {/* ── Clarifying questions (only while answering) ── */}
+        {phase === "questions" && questions.length > 0 && (
+          <ClarifyingQuestions
+            questions={questions}
+            answers={answers}
+            onChange={setAnswers}
+          />
+        )}
+
+        {/* ── Non-blocking note if questions couldn't load ── */}
+        {questionsError && phase !== "results" && (
+          <p className="text-sm" style={{ color: "var(--text-dim)" }}>
+            Couldn’t load questions ({questionsError}) — you can still hit Generate.
+          </p>
+        )}
+
+        {/* ── Once answers are submitted, a compact summary + edit link ── */}
+        {phase === "ready" && answers.length > 0 && (
+          <button
+            onClick={editAnswers}
+            className="self-start text-sm underline"
+            style={{ color: "var(--text-dim)" }}
+          >
+            ✓ {answers.length} answer{answers.length > 1 ? "s" : ""} set · Edit
+          </button>
         )}
 
         {/* ── Side-by-side results ── */}

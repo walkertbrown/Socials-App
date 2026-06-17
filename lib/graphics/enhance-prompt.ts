@@ -29,8 +29,9 @@ export async function enhancePrompt(input: {
 Your job: take a short brief and rewrite it into a rich, specific image-generation prompt for a text-to-image model. EVERYTHING you write describes a FLAT GRAPHIC-DESIGN POSTER / SOCIAL-MEDIA INFOGRAPHIC — the kind of designed graphic made in Canva or Adobe Illustrator. It is a designed graphic, not a scene.
 
 Write every prompt in the visual language of graphic design:
+- THE HEADLINE TEXT IS THE SUBJECT AND MAIN FOCUS of the image — large, bold, and dominant, the first and most important thing the eye lands on. It should occupy a major share of the composition. Everything else exists only to frame and support the words.
+- Every other element (color fields, shapes, icons, accents) is SECONDARY DECORATION that supports the text and must never compete with it, crowd it, or overshadow it. Keep decoration simple and sparse.
 - Flat vector illustration, clean solid color fields, crisp shapes, editorial/poster layout.
-- Bold, legible TYPOGRAPHY is the hero — the headline text is a central design element.
 - Pick any decorative accents from the SUBJECT of the brief; never default to a fixed set of motifs (don't reach for ribbons, confetti, or swirls unless the topic truly calls for them).
 - A cohesive, limited flat color palette; balanced composition with generous negative space.
 
@@ -95,7 +96,7 @@ Write the image-generation prompt.`;
   // language, no "not a photo" negation (which would only make the image
   // model attend to photographs).
   const STYLE_ANCHOR =
-    " Flat vector graphic-design illustration — a bold typographic poster with clean flat color fields and a polished editorial layout.";
+    " Flat vector graphic-design illustration — a bold typographic poster where the large headline text is the dominant focal element, with clean flat color fields and only simple supporting decoration.";
 
   return enhanced + STYLE_ANCHOR;
 }

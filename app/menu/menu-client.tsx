@@ -1,6 +1,11 @@
 "use client";
 
+// Menu Maker — sub-screen of Studio (back arrow, bottom tab stays).
+
 import { useState, useRef } from "react";
+import { useRouter } from "next/navigation";
+import { ArrowLeft } from "lucide-react";
+import { AppShell } from "@/components/app-shell";
 import { CutLineEditor } from "./cut-line-editor";
 import { OutputCard } from "./output-card";
 
@@ -45,6 +50,7 @@ async function parseJson(res: Response) {
 }
 
 export function MenuClient() {
+  const router = useRouter();
   const [step, setStep] = useState<Step>("idle");
   const [error, setError] = useState<string | null>(null);
   const [previewSrc, setPreviewSrc] = useState<string | null>(null);
@@ -113,13 +119,28 @@ export function MenuClient() {
   }
 
   return (
-    <div style={{ maxWidth: 720, margin: "0 auto", padding: "32px 20px", background: "var(--bg)", minHeight: "100vh", color: "var(--text-primary)" }}>
-      <h1 style={{ fontSize: 24, fontWeight: 700, marginBottom: 6, fontFamily: "var(--font-serif)", color: "var(--text-primary)" }}>
-        Menu Maker
-      </h1>
-      <p style={{ fontSize: 13, color: "var(--text-secondary)", marginBottom: 24 }}>
-        PDF menu → full-page PNG (Google) + square sections (Instagram).
-      </p>
+    <AppShell>
+      <div className="mx-auto flex w-full max-w-xl flex-1 flex-col gap-5 px-4 pt-6 pb-4">
+
+        {/* Back arrow — sub-screen of Studio */}
+        <button
+          onClick={() => router.back()}
+          className="flex items-center gap-1.5 self-start text-sm transition-opacity hover:opacity-70"
+          style={{ color: "var(--text-dim)", background: "none", border: "none" }}
+        >
+          <ArrowLeft size={16} strokeWidth={1.8} />
+          Studio
+        </button>
+
+        <div>
+          <p className="eyebrow mb-1">STUDIO</p>
+          <h1 className="text-2xl tracking-tight" style={{ fontFamily: "var(--font-serif)", fontWeight: 500, color: "var(--text-primary)" }}>
+            Menu Maker
+          </h1>
+          <p className="mt-1 text-sm" style={{ color: "var(--text-secondary)" }}>
+            PDF menu → full-page PNG (Google) + square sections (Instagram).
+          </p>
+        </div>
 
       {error && (
         <div style={{ background: "var(--red-dim)", border: "1px solid var(--red)", borderRadius: 6, padding: "10px 14px", fontSize: 13, color: "var(--red)", marginBottom: 16 }}>
@@ -132,7 +153,7 @@ export function MenuClient() {
           <input type="file" name="pdf" accept="application/pdf" required
             style={{ fontSize: 14, color: "var(--text-secondary)" }} />
           <button type="submit" disabled={step === "loading-preview"}
-            style={{ alignSelf: "flex-start", padding: "8px 20px", background: "var(--gold)", color: "var(--bg)", border: "none", borderRadius: 6, fontSize: 14, fontWeight: 600, cursor: "pointer", opacity: step === "loading-preview" ? 0.6 : 1 }}>
+            style={{ alignSelf: "flex-start", padding: "8px 20px", background: "var(--gold)", color: "var(--on-accent)", border: "none", borderRadius: 6, fontSize: 14, fontWeight: 600, cursor: "pointer", opacity: step === "loading-preview" ? 0.6 : 1 }}>
             {step === "loading-preview" ? "Rendering preview…" : "Upload & Preview"}
           </button>
         </form>
@@ -144,7 +165,7 @@ export function MenuClient() {
           <CutLineEditor previewSrc={previewSrc} onChange={setCuts} />
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             <button onClick={handleGenerate} disabled={cuts.length === 0 || step === "generating"}
-              style={{ padding: "8px 20px", background: "var(--gold)", color: "var(--bg)", border: "none", borderRadius: 6, fontSize: 14, fontWeight: 600, cursor: "pointer", opacity: (cuts.length === 0 || step === "generating") ? 0.5 : 1 }}>
+              style={{ padding: "8px 20px", background: "var(--gold)", color: "var(--on-accent)", border: "none", borderRadius: 6, fontSize: 14, fontWeight: 600, cursor: "pointer", opacity: (cuts.length === 0 || step === "generating") ? 0.5 : 1 }}>
               {step === "generating" ? "Generating…" : "Generate"}
             </button>
             <button onClick={reset} style={{ fontSize: 13, color: "var(--text-dim)", background: "none", border: "none", cursor: "pointer", textDecoration: "underline" }}>
@@ -168,6 +189,7 @@ export function MenuClient() {
           </button>
         </div>
       )}
-    </div>
+      </div>
+    </AppShell>
   );
 }

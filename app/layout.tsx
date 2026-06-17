@@ -1,20 +1,29 @@
 import type { Metadata } from "next";
-import { Outfit, Crimson_Pro } from "next/font/google";
+import { Geist, Geist_Mono, Newsreader } from "next/font/google";
 import { ThemeProvider } from "@/components/theme-provider";
 import "./globals.css";
 
-const outfit = Outfit({
-  variable: "--font-outfit",
+const geist = Geist({
+  variable: "--font-geist",
   subsets: ["latin"],
-  weight: ["300", "400", "500", "600"],
+  weight: ["400", "500"],
 });
 
-const crimsonPro = Crimson_Pro({
-  variable: "--font-crimson",
+const geistMono = Geist_Mono({
+  variable: "--font-geist-mono",
   subsets: ["latin"],
-  weight: ["300", "400", "600"],
+  weight: ["400", "500"],
+});
+
+const newsreader = Newsreader({
+  variable: "--font-newsreader",
+  subsets: ["latin"],
+  weight: ["400", "500"],
   style: ["normal", "italic"],
 });
+
+// All three font variable class names, joined — referenced in the no-flash script below.
+const fontClasses = `${geist.variable} ${geistMono.variable} ${newsreader.variable}`;
 
 export const metadata: Metadata = {
   title: "Provenance",
@@ -23,7 +32,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport = {
-  themeColor: "#100c09",
+  themeColor: "#0b0b0c",
 };
 
 export default function RootLayout({
@@ -32,20 +41,31 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${outfit.variable} ${crimsonPro.variable} dark h-full antialiased`}
+      className={`${fontClasses} dark h-full antialiased`}
       suppressHydrationWarning
     >
       <head>
-        {/* No-flash script: reads localStorage before paint and applies class to <html>.
-            Default is dark — matches the :root token block in globals.css. */}
+        {/* No-flash script: reads localStorage before paint and applies theme class
+            to <html> WITHOUT destroying the font variable classes.
+            Adds only "dark" or "light" to the existing className. */}
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{var t=localStorage.getItem('theme');document.documentElement.className=(t==='light'?'light':'dark')+' h-full antialiased ${outfit.variable} ${crimsonPro.variable}';}catch(e){}})();`,
+            __html: `(function(){try{
+  var t=localStorage.getItem('theme');
+  var el=document.documentElement;
+  var cls=el.className;
+  // Remove any prior theme tokens, keep font vars + utility classes
+  cls=cls.replace(/\\b(dark|light)\\b/g,'').trim();
+  el.className=cls+' '+(t==='light'?'light':'dark');
+}catch(e){}})();`,
           }}
         />
       </head>
-      <body className="min-h-full flex flex-col" style={{ background: "var(--bg)", color: "var(--text-primary)", fontFamily: "var(--font-sans)" }}>
-        <ThemeProvider>{children}</ThemeProvider>
+      <body
+        className="min-h-full flex flex-col"
+        style={{ background: "var(--bg)", color: "var(--text-primary)", fontFamily: "var(--font-sans)" }}
+      >
+        <ThemeProvider fontClasses={fontClasses}>{children}</ThemeProvider>
       </body>
     </html>
   );

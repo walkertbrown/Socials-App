@@ -1,8 +1,12 @@
 "use client";
 
+// Post detail — sub-screen of Scheduled (back arrow → /posts, bottom tab stays).
+
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
+import { AppShell } from "@/components/app-shell";
 
 interface Props {
   id: string;
@@ -62,11 +66,26 @@ export function PostClient({ id, photoId, caption, platforms, done, isExemplar =
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-md flex-1 flex-col gap-4 p-4">
-      <h1 className="text-lg font-semibold" style={{ color: "var(--text-primary)" }}>
-        Time to post your video 🎬
-      </h1>
-      <p className="text-sm" style={{ color: "var(--text-secondary)" }}>For {platforms.join(" + ")}.</p>
+    <AppShell>
+      <div className="mx-auto flex w-full max-w-xl flex-1 flex-col gap-4 px-4 pt-6 pb-4">
+
+        {/* Back arrow — reached from Scheduled list */}
+        <button
+          onClick={() => router.back()}
+          className="flex items-center gap-1.5 self-start text-sm transition-opacity hover:opacity-70"
+          style={{ color: "var(--text-dim)", background: "none", border: "none" }}
+        >
+          <ArrowLeft size={16} strokeWidth={1.8} />
+          Scheduled
+        </button>
+
+        <div>
+          <p className="eyebrow mb-1">STUDIO</p>
+          <h1 className="text-2xl tracking-tight" style={{ fontFamily: "var(--font-serif)", fontWeight: 500, color: "var(--text-primary)" }}>
+            Time to post
+          </h1>
+          <p className="mt-1 text-sm" style={{ color: "var(--text-secondary)" }}>For {platforms.join(" + ")}.</p>
+        </div>
 
       {/* Watch it right here — streamed from Drive through the app. Sized to the
           clip's own aspect ratio so vertical Reels aren't letterboxed. */}
@@ -83,8 +102,7 @@ export function PostClient({ id, photoId, caption, platforms, done, isExemplar =
 
       <a
         href={`/api/videos/${photoId}/download?download=1`}
-        className="rounded-md px-4 py-3 text-center text-sm font-medium transition-colors hover:opacity-90"
-        style={{ background: "var(--gold)", color: "var(--bg)" }}
+        className="btn-teal rounded-md px-4 py-3 text-center text-sm font-medium"
       >
         1. Save video to phone
       </a>
@@ -157,6 +175,7 @@ export function PostClient({ id, photoId, caption, platforms, done, isExemplar =
       <Link href="/posts" className="text-center text-xs underline" style={{ color: "var(--text-dim)" }}>
         ← All posts
       </Link>
-    </div>
+      </div>
+    </AppShell>
   );
 }

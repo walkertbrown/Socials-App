@@ -1,15 +1,18 @@
 "use client";
 
+// Scheduled posts list — sub-screen of Studio (back arrow, bottom tab stays).
+
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
+import { AppShell } from "@/components/app-shell";
 import type { PostGroup } from "@/lib/db/post-groups";
 import { utcToCentral } from "@/lib/time";
 import { EnableNotifications } from "@/components/enable-notifications";
 import { PostGroupCard } from "@/components/post-group-card";
-import { AppHeader } from "@/components/app-header";
 
-export function PostsClient({ initialGroups, userEmail = "" }: { initialGroups: PostGroup[]; userEmail?: string }) {
+export function PostsClient({ initialGroups, userEmail: _userEmail = "" }: { initialGroups: PostGroup[]; userEmail?: string }) {
   const router = useRouter();
   const [groups, setGroups] = useState(initialGroups);
   useEffect(() => setGroups(initialGroups), [initialGroups]);
@@ -27,37 +30,49 @@ export function PostsClient({ initialGroups, userEmail = "" }: { initialGroups: 
   );
 
   return (
-    <div className="flex flex-1 flex-col">
-      <AppHeader userEmail={userEmail} />
-    <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-3 p-4">
-      <div className="flex items-center justify-between">
-        <h1
-          className="text-lg"
-          style={{ fontFamily: "var(--font-serif)", fontWeight: 600, color: "var(--text-primary)" }}
+    <AppShell>
+      <div className="mx-auto flex w-full max-w-xl flex-1 flex-col gap-5 px-4 pt-6 pb-4">
+
+        {/* Back arrow — sub-screen of Studio */}
+        <button
+          onClick={() => router.back()}
+          className="flex items-center gap-1.5 self-start text-sm transition-opacity hover:opacity-70"
+          style={{ color: "var(--text-dim)", background: "none", border: "none" }}
         >
-          Scheduled posts
-        </h1>
-        <div className="flex items-center gap-3 text-sm">
-          <EnableNotifications />
-          <Link
-            href="/compose"
-            className="rounded-md px-3 py-1 font-medium transition-colors hover:opacity-90"
-            style={{ background: "var(--gold)", color: "var(--bg)" }}
-          >
-            New post
-          </Link>
+          <ArrowLeft size={16} strokeWidth={1.8} />
+          Studio
+        </button>
+
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="eyebrow mb-1">STUDIO</p>
+            <h1
+              className="text-2xl tracking-tight"
+              style={{ fontFamily: "var(--font-serif)", fontWeight: 500, color: "var(--text-primary)" }}
+            >
+              Scheduled
+            </h1>
+          </div>
+          <div className="flex items-center gap-3 text-sm">
+            <EnableNotifications />
+            <Link
+              href="/compose"
+              className="btn-teal rounded-md px-3 py-1.5 font-medium"
+            >
+              New post
+            </Link>
+          </div>
         </div>
+
+        {groups.length === 0 && (
+          <p className="py-16 text-center" style={{ color: "var(--text-dim)" }}>No posts yet. Click &quot;New post.&quot;</p>
+        )}
+
+        {groups.map((g) => (
+          <PostGroupCard key={g.post_group_id} group={g} onAct={act} />
+        ))}
       </div>
-
-      {groups.length === 0 && (
-        <p className="py-16 text-center" style={{ color: "var(--text-dim)" }}>No posts yet. Click &quot;New post.&quot;</p>
-      )}
-
-      {groups.map((g) => (
-        <PostGroupCard key={g.post_group_id} group={g} onAct={act} />
-      ))}
-    </div>
-    </div>
+    </AppShell>
   );
 }
 

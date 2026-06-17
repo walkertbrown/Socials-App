@@ -1,11 +1,17 @@
 "use client";
 
+// DM Inbox — standalone screen. Back arrow to Overview. Bottom tab bar stays.
+
 import { useState, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
+import { ArrowLeft } from "lucide-react";
+import { AppShell } from "@/components/app-shell";
 import type { DmThread, DmMessage } from "@/lib/db/dm-threads";
 
 type Platform = "instagram" | "facebook";
 
 export function MessagesClient({ initialThreads }: { initialThreads: DmThread[] }) {
+  const router = useRouter();
   const [threads, setThreads] = useState(initialThreads);
   const [platform, setPlatform] = useState<Platform>("instagram");
   const [activeThreadId, setActiveThreadId] = useState<string | null>(null);
@@ -66,13 +72,29 @@ export function MessagesClient({ initialThreads }: { initialThreads: DmThread[] 
   }, [messages]);
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100vh", background: "var(--bg)", color: "var(--text-primary)" }}>
-      {/* Header */}
-      <div style={{ background: "var(--surface)", borderBottom: "1px solid var(--border)", padding: "12px 20px", display: "flex", alignItems: "center", gap: 24 }}>
-        <span style={{ fontWeight: 700, fontSize: 16, color: "var(--text-primary)" }}>Messages</span>
-        <button onClick={() => setActiveTab("inbox")} style={tabStyle(activeTab === "inbox")}>Inbox</button>
-        <button onClick={() => setActiveTab("settings")} style={tabStyle(activeTab === "settings")}>Auto-reply rules</button>
-      </div>
+    <AppShell>
+      {/* Full-height column inside AppShell's padded container */}
+      <div style={{ display: "flex", flexDirection: "column", flex: 1, overflow: "hidden", background: "var(--bg)", color: "var(--text-primary)" }}>
+
+        {/* Header: back arrow + eyebrow/title + tabs */}
+        <div style={{ background: "var(--surface)", borderBottom: "1px solid var(--border)", padding: "12px 20px" }}>
+          <button
+            onClick={() => router.back()}
+            className="flex items-center gap-1.5 mb-2 text-sm transition-opacity hover:opacity-70"
+            style={{ color: "var(--text-dim)", background: "none", border: "none" }}
+          >
+            <ArrowLeft size={16} strokeWidth={1.8} />
+            Overview
+          </button>
+          <div style={{ display: "flex", alignItems: "center", gap: 24 }}>
+            <div>
+              <p className="eyebrow mb-0.5">INBOX</p>
+              <span style={{ fontFamily: "var(--font-serif)", fontWeight: 500, fontSize: 20, color: "var(--text-primary)" }}>Messages</span>
+            </div>
+            <button onClick={() => setActiveTab("inbox")} style={tabStyle(activeTab === "inbox")}>Inbox</button>
+            <button onClick={() => setActiveTab("settings")} style={tabStyle(activeTab === "settings")}>Auto-reply rules</button>
+          </div>
+        </div>
 
       {activeTab === "settings" ? (
         <RulesSettings />
@@ -136,7 +158,7 @@ export function MessagesClient({ initialThreads }: { initialThreads: DmThread[] 
                 <div style={{ flex: 1, overflowY: "auto", padding: 20, display: "flex", flexDirection: "column", gap: 8 }}>
                   {messages.map((m) => (
                     <div key={m.id} style={{ display: "flex", justifyContent: m.direction === "outbound" ? "flex-end" : "flex-start" }}>
-                      <div style={{ maxWidth: "70%", background: m.direction === "outbound" ? "var(--gold)" : "var(--surface-hi)", color: m.direction === "outbound" ? "var(--bg)" : "var(--text-primary)", borderRadius: 12, padding: "8px 12px" }}>
+                      <div style={{ maxWidth: "70%", background: m.direction === "outbound" ? "var(--gold)" : "var(--surface-hi)", color: m.direction === "outbound" ? "var(--on-accent)" : "var(--text-primary)", borderRadius: 12, padding: "8px 12px" }}>
                         <div style={{ fontSize: 14 }}>{m.body}</div>
                         <div style={{ display: "flex", gap: 6, marginTop: 3, alignItems: "center", justifyContent: "flex-end" }}>
                           {m.auto_reply_rule_id && <span style={{ fontSize: 10, background: "rgba(255,255,255,0.15)", borderRadius: 4, padding: "1px 5px" }}>auto</span>}
@@ -156,7 +178,7 @@ export function MessagesClient({ initialThreads }: { initialThreads: DmThread[] 
                     rows={2}
                     style={{ flex: 1, resize: "none", border: "1px solid var(--border-hi)", borderRadius: 8, padding: "8px 10px", fontSize: 14, fontFamily: "inherit", background: "var(--surface-hi)", color: "var(--text-primary)" }}
                   />
-                  <button onClick={sendReply} disabled={sending || !replyText.trim()} style={{ padding: "8px 18px", background: "var(--gold)", color: "var(--bg)", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 600, opacity: sending || !replyText.trim() ? 0.5 : 1 }}>
+                  <button onClick={sendReply} disabled={sending || !replyText.trim()} style={{ padding: "8px 18px", background: "var(--gold)", color: "var(--on-accent)", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 600, opacity: sending || !replyText.trim() ? 0.5 : 1 }}>
                     {sending ? "…" : "Send"}
                   </button>
                 </div>
@@ -165,7 +187,8 @@ export function MessagesClient({ initialThreads }: { initialThreads: DmThread[] 
           </div>
         </div>
       )}
-    </div>
+      </div>
+    </AppShell>
   );
 }
 
@@ -225,14 +248,14 @@ function RulesSettings() {
       ))}
 
       {addingStep === null && (
-        <button onClick={() => setAddingStep("trigger")} style={{ marginTop: 8, padding: "8px 18px", background: "var(--gold)", color: "var(--bg)", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 600 }}>+ Add rule</button>
+        <button onClick={() => setAddingStep("trigger")} style={{ marginTop: 8, padding: "8px 18px", background: "var(--gold)", color: "var(--on-accent)", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 600 }}>+ Add rule</button>
       )}
       {addingStep === "trigger" && (
         <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 8, padding: 16, marginTop: 8 }}>
           <div style={{ marginBottom: 10, fontWeight: 600, color: "var(--text-primary)" }}>What messages should trigger this rule?</div>
           <textarea value={newTrigger} onChange={(e) => setNewTrigger(e.target.value)} placeholder='e.g. "asking about reservations or table booking"' rows={2} style={{ width: "100%", border: "1px solid var(--border-hi)", borderRadius: 6, padding: 8, fontSize: 14, fontFamily: "inherit", resize: "none", boxSizing: "border-box", background: "var(--surface-hi)", color: "var(--text-primary)" }} />
           <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
-            <button onClick={() => { if (newTrigger.trim()) setAddingStep("reply"); }} disabled={!newTrigger.trim()} style={{ padding: "6px 16px", background: "var(--gold)", color: "var(--bg)", border: "none", borderRadius: 6, cursor: "pointer", fontWeight: 600, opacity: newTrigger.trim() ? 1 : 0.4 }}>Next</button>
+            <button onClick={() => { if (newTrigger.trim()) setAddingStep("reply"); }} disabled={!newTrigger.trim()} style={{ padding: "6px 16px", background: "var(--gold)", color: "var(--on-accent)", border: "none", borderRadius: 6, cursor: "pointer", fontWeight: 600, opacity: newTrigger.trim() ? 1 : 0.4 }}>Next</button>
             <button onClick={() => { setAddingStep(null); setNewTrigger(""); }} style={{ padding: "6px 14px", border: "1px solid var(--border-hi)", background: "transparent", color: "var(--text-secondary)", borderRadius: 6, cursor: "pointer" }}>Cancel</button>
           </div>
         </div>
@@ -243,7 +266,7 @@ function RulesSettings() {
           <div style={{ marginBottom: 10, fontWeight: 600, color: "var(--text-primary)" }}>What should the auto-reply say?</div>
           <textarea value={newReply} onChange={(e) => setNewReply(e.target.value)} placeholder="Hi! Thanks for reaching out…" rows={3} style={{ width: "100%", border: "1px solid var(--border-hi)", borderRadius: 6, padding: 8, fontSize: 14, fontFamily: "inherit", resize: "none", boxSizing: "border-box", background: "var(--surface-hi)", color: "var(--text-primary)" }} />
           <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
-            <button onClick={saveRule} disabled={!newReply.trim()} style={{ padding: "6px 16px", background: "var(--gold)", color: "var(--bg)", border: "none", borderRadius: 6, cursor: "pointer", fontWeight: 600, opacity: newReply.trim() ? 1 : 0.4 }}>Save rule</button>
+            <button onClick={saveRule} disabled={!newReply.trim()} style={{ padding: "6px 16px", background: "var(--gold)", color: "var(--on-accent)", border: "none", borderRadius: 6, cursor: "pointer", fontWeight: 600, opacity: newReply.trim() ? 1 : 0.4 }}>Save rule</button>
             <button onClick={() => setAddingStep("trigger")} style={{ padding: "6px 14px", border: "1px solid var(--border-hi)", background: "transparent", color: "var(--text-secondary)", borderRadius: 6, cursor: "pointer" }}>Back</button>
           </div>
         </div>

@@ -178,7 +178,7 @@ export function MessagesClient({ initialThreads }: { initialThreads: DmThread[] 
                     rows={2}
                     style={{ flex: 1, resize: "none", border: "1px solid var(--border-hi)", borderRadius: 8, padding: "8px 10px", fontSize: 14, fontFamily: "inherit", background: "var(--surface-hi)", color: "var(--text-primary)" }}
                   />
-                  <button onClick={sendReply} disabled={sending || !replyText.trim()} style={{ padding: "8px 18px", background: "var(--gold)", color: "var(--on-accent)", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 600, opacity: sending || !replyText.trim() ? 0.5 : 1 }}>
+                  <button onClick={sendReply} disabled={sending || !replyText.trim()} className="btn-teal" style={{ padding: "8px 18px", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 600, opacity: sending || !replyText.trim() ? 0.5 : 1 }}>
                     {sending ? "…" : "Send"}
                   </button>
                 </div>
@@ -248,14 +248,14 @@ function RulesSettings() {
       ))}
 
       {addingStep === null && (
-        <button onClick={() => setAddingStep("trigger")} style={{ marginTop: 8, padding: "8px 18px", background: "var(--gold)", color: "var(--on-accent)", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 600 }}>+ Add rule</button>
+        <button onClick={() => setAddingStep("trigger")} className="btn-teal" style={{ marginTop: 8, padding: "8px 18px", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 600 }}>+ Add rule</button>
       )}
       {addingStep === "trigger" && (
         <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 8, padding: 16, marginTop: 8 }}>
           <div style={{ marginBottom: 10, fontWeight: 600, color: "var(--text-primary)" }}>What messages should trigger this rule?</div>
           <textarea value={newTrigger} onChange={(e) => setNewTrigger(e.target.value)} placeholder='e.g. "asking about reservations or table booking"' rows={2} style={{ width: "100%", border: "1px solid var(--border-hi)", borderRadius: 6, padding: 8, fontSize: 14, fontFamily: "inherit", resize: "none", boxSizing: "border-box", background: "var(--surface-hi)", color: "var(--text-primary)" }} />
           <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
-            <button onClick={() => { if (newTrigger.trim()) setAddingStep("reply"); }} disabled={!newTrigger.trim()} style={{ padding: "6px 16px", background: "var(--gold)", color: "var(--on-accent)", border: "none", borderRadius: 6, cursor: "pointer", fontWeight: 600, opacity: newTrigger.trim() ? 1 : 0.4 }}>Next</button>
+            <button onClick={() => { if (newTrigger.trim()) setAddingStep("reply"); }} disabled={!newTrigger.trim()} className="btn-teal" style={{ padding: "6px 16px", border: "none", borderRadius: 6, cursor: "pointer", fontWeight: 600, opacity: newTrigger.trim() ? 1 : 0.4 }}>Next</button>
             <button onClick={() => { setAddingStep(null); setNewTrigger(""); }} style={{ padding: "6px 14px", border: "1px solid var(--border-hi)", background: "transparent", color: "var(--text-secondary)", borderRadius: 6, cursor: "pointer" }}>Cancel</button>
           </div>
         </div>
@@ -266,7 +266,7 @@ function RulesSettings() {
           <div style={{ marginBottom: 10, fontWeight: 600, color: "var(--text-primary)" }}>What should the auto-reply say?</div>
           <textarea value={newReply} onChange={(e) => setNewReply(e.target.value)} placeholder="Hi! Thanks for reaching out…" rows={3} style={{ width: "100%", border: "1px solid var(--border-hi)", borderRadius: 6, padding: 8, fontSize: 14, fontFamily: "inherit", resize: "none", boxSizing: "border-box", background: "var(--surface-hi)", color: "var(--text-primary)" }} />
           <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
-            <button onClick={saveRule} disabled={!newReply.trim()} style={{ padding: "6px 16px", background: "var(--gold)", color: "var(--on-accent)", border: "none", borderRadius: 6, cursor: "pointer", fontWeight: 600, opacity: newReply.trim() ? 1 : 0.4 }}>Save rule</button>
+            <button onClick={saveRule} disabled={!newReply.trim()} className="btn-teal" style={{ padding: "6px 16px", border: "none", borderRadius: 6, cursor: "pointer", fontWeight: 600, opacity: newReply.trim() ? 1 : 0.4 }}>Save rule</button>
             <button onClick={() => setAddingStep("trigger")} style={{ padding: "6px 14px", border: "1px solid var(--border-hi)", background: "transparent", color: "var(--text-secondary)", borderRadius: 6, cursor: "pointer" }}>Back</button>
           </div>
         </div>

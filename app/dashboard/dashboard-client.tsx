@@ -63,8 +63,7 @@ export function DashboardClient({ summary, userEmail: _userEmail }: DashboardCli
         <div className="mt-6">
           <Link
             href="/board"
-            className="block w-full rounded py-3 text-center text-sm font-medium transition-opacity hover:opacity-90"
-            style={{ background: "var(--gold)", color: "var(--on-accent)" }}
+            className="btn-teal block w-full rounded py-3 text-center text-sm font-medium"
           >
             Go to Board
           </Link>

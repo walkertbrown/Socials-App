@@ -152,8 +152,8 @@ export function MenuClient() {
         <form onSubmit={handleUpload} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           <input type="file" name="pdf" accept="application/pdf" required
             style={{ fontSize: 14, color: "var(--text-secondary)" }} />
-          <button type="submit" disabled={step === "loading-preview"}
-            style={{ alignSelf: "flex-start", padding: "8px 20px", background: "var(--gold)", color: "var(--on-accent)", border: "none", borderRadius: 6, fontSize: 14, fontWeight: 600, cursor: "pointer", opacity: step === "loading-preview" ? 0.6 : 1 }}>
+          <button type="submit" disabled={step === "loading-preview"} className="btn-teal"
+            style={{ alignSelf: "flex-start", padding: "8px 20px", border: "none", borderRadius: 6, fontSize: 14, fontWeight: 600, cursor: "pointer", opacity: step === "loading-preview" ? 0.6 : 1 }}>
             {step === "loading-preview" ? "Rendering preview…" : "Upload & Preview"}
           </button>
         </form>
@@ -164,8 +164,8 @@ export function MenuClient() {
           <p style={{ fontSize: 12, color: "var(--text-dim)" }}>Click to add cut lines. Drag to adjust. Click × to remove.</p>
           <CutLineEditor previewSrc={previewSrc} onChange={setCuts} />
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <button onClick={handleGenerate} disabled={cuts.length === 0 || step === "generating"}
-              style={{ padding: "8px 20px", background: "var(--gold)", color: "var(--on-accent)", border: "none", borderRadius: 6, fontSize: 14, fontWeight: 600, cursor: "pointer", opacity: (cuts.length === 0 || step === "generating") ? 0.5 : 1 }}>
+            <button onClick={handleGenerate} disabled={cuts.length === 0 || step === "generating"} className="btn-teal"
+              style={{ padding: "8px 20px", border: "none", borderRadius: 6, fontSize: 14, fontWeight: 600, cursor: "pointer", opacity: (cuts.length === 0 || step === "generating") ? 0.5 : 1 }}>
               {step === "generating" ? "Generating…" : "Generate"}
             </button>
             <button onClick={reset} style={{ fontSize: 13, color: "var(--text-dim)", background: "none", border: "none", cursor: "pointer", textDecoration: "underline" }}>

@@ -102,8 +102,7 @@ export function PostClient({ id, photoId, caption, platforms, done, isExemplar =
 
       <a
         href={`/api/videos/${photoId}/download?download=1`}
-        className="rounded-md px-4 py-3 text-center text-sm font-medium transition-colors hover:opacity-90"
-        style={{ background: "var(--gold)", color: "var(--on-accent)" }}
+        className="btn-teal rounded-md px-4 py-3 text-center text-sm font-medium"
       >
         1. Save video to phone
       </a>

@@ -187,8 +187,7 @@ function InsightsHeader({
       )}
       <div className="flex items-center gap-2 text-sm">
         {hasReport && onDownload && (
-          <button onClick={onDownload} className="rounded px-3 py-1.5 text-sm font-medium transition-opacity hover:opacity-90"
-            style={{ background: "var(--gold)", color: "var(--on-accent)" }}>
+          <button onClick={onDownload} className="btn-teal rounded px-3 py-1.5 text-sm font-medium">
             Download PDF
           </button>
         )}

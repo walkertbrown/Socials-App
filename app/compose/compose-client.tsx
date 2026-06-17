@@ -237,8 +237,7 @@ export function ComposeClient({
               {mediaMode === "graphic" ? "2" : "4"}. Caption
             </p>
             <button onClick={draft} disabled={mediaMode !== "photo" || selectedIds.length === 0 || drafting}
-              className="rounded px-3 py-1 text-sm font-medium transition-opacity hover:opacity-90 disabled:opacity-40"
-              style={{ background: "var(--gold)", color: "var(--on-accent)" }}>
+              className="btn-teal rounded px-3 py-1 text-sm font-medium">
               {drafting ? "Writing…" : "Draft with AI"}
             </button>
           </div>
@@ -275,8 +274,7 @@ export function ComposeClient({
 
         {/* Full-width teal CTA */}
         <button onClick={schedule} disabled={saving}
-          className="w-full rounded py-3 text-sm font-medium transition-opacity hover:opacity-90 disabled:opacity-50"
-          style={{ background: "var(--gold)", color: "var(--on-accent)" }}>
+          className="btn-teal w-full rounded py-3 text-sm font-medium">
           {saving ? "Scheduling…" : "Schedule post"}
         </button>
       </div>

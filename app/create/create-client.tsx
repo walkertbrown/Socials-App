@@ -96,9 +96,12 @@ export function CreateClient({ userEmail: _userEmail = "" }: CreateClientProps) 
           Studio
         </button>
 
-        <h1 className="text-2xl tracking-tight" style={{ fontFamily: "var(--font-serif)", fontWeight: 500, color: "var(--text-primary)" }}>
-          Create graphic
-        </h1>
+        <div>
+          <p className="eyebrow mb-1">STUDIO</p>
+          <h1 className="text-2xl tracking-tight" style={{ fontFamily: "var(--font-serif)", fontWeight: 500, color: "var(--text-primary)" }}>
+            Create graphic
+          </h1>
+        </div>
 
         {/* ── Prompt + format + primary CTA ── */}
         <section className="flex flex-col gap-3">
@@ -143,8 +146,7 @@ export function CreateClient({ userEmail: _userEmail = "" }: CreateClientProps) 
             <button
               onClick={handlePrimaryClick}
               disabled={primaryDisabled}
-              className="ml-auto rounded-md px-5 py-2 text-sm font-medium transition-colors hover:opacity-90 disabled:opacity-40"
-              style={{ background: "var(--gold)", color: "var(--on-accent)" }}
+              className="btn-teal ml-auto rounded-md px-5 py-2 text-sm font-medium"
             >
               {primaryLabel()}
             </button>

@@ -191,8 +191,7 @@ export function BoardClient({
               </span>
               <div className="flex gap-2">
                 <button onClick={() => setCarouselIds([])} className="text-xs underline" style={{ color: "var(--text-dim)" }}>Cancel</button>
-                <button onClick={goToCompose} className="rounded px-3 py-1 text-xs font-semibold"
-                  style={{ background: "var(--gold)", color: "var(--on-accent)" }}>
+                <button onClick={goToCompose} className="btn-teal rounded px-3 py-1 text-xs font-semibold">
                   Create carousel →
                 </button>
               </div>

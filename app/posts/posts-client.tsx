@@ -44,18 +44,20 @@ export function PostsClient({ initialGroups, userEmail: _userEmail = "" }: { ini
         </button>
 
         <div className="flex items-center justify-between">
-          <h1
-            className="text-2xl tracking-tight"
-            style={{ fontFamily: "var(--font-serif)", fontWeight: 500, color: "var(--text-primary)" }}
-          >
-            Scheduled
-          </h1>
+          <div>
+            <p className="eyebrow mb-1">STUDIO</p>
+            <h1
+              className="text-2xl tracking-tight"
+              style={{ fontFamily: "var(--font-serif)", fontWeight: 500, color: "var(--text-primary)" }}
+            >
+              Scheduled
+            </h1>
+          </div>
           <div className="flex items-center gap-3 text-sm">
             <EnableNotifications />
             <Link
               href="/compose"
-              className="rounded-md px-3 py-1.5 font-medium transition-colors hover:opacity-90"
-              style={{ background: "var(--gold)", color: "var(--on-accent)" }}
+              className="btn-teal rounded-md px-3 py-1.5 font-medium"
             >
               New post
             </Link>

@@ -17,12 +17,13 @@ export async function generateOpenAIImage(input: {
 
   const size = input.format === "story" ? "1024x1536" : "1024x1024";
 
+  // gpt-image-2 ALWAYS returns base64 in b64_json — it does not accept a
+  // response_format param (that was a DALL-E 3 option and 400s here).
   const result = await client.images.generate({
     model: MODEL,
     prompt: input.prompt,
     size,
     quality: "medium",
-    response_format: "b64_json",
     n: 1,
   });
 

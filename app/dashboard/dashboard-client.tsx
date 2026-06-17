@@ -1,8 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { AppHeader } from "@/components/app-header";
+import { AppShell } from "@/components/app-shell";
+import { ScreenEyebrow } from "@/components/screen-eyebrow";
 import { OverviewCards } from "@/components/dashboard/overview-cards";
+import { useTheme } from "@/components/theme-provider";
+import { Sun, Moon, LogOut } from "lucide-react";
 import type { DashboardSummary } from "@/lib/db/dashboard-summary";
 
 interface DashboardClientProps {
@@ -10,43 +13,55 @@ interface DashboardClientProps {
   userEmail: string;
 }
 
-export function DashboardClient({ summary, userEmail }: DashboardClientProps) {
-  return (
-    <div className="flex flex-1 flex-col">
-      <AppHeader userEmail={userEmail} />
+export function DashboardClient({ summary, userEmail: _userEmail }: DashboardClientProps) {
+  const { theme, toggleTheme } = useTheme();
 
-      <main className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-8 px-4 py-10">
-        <div>
-          <h1
-            className="text-2xl tracking-tight"
-            style={{ fontFamily: "var(--font-serif)", fontWeight: 600, color: "var(--text-primary)" }}
+  return (
+    <AppShell>
+      <main className="mx-auto flex w-full max-w-xl flex-1 flex-col px-4 pt-10 pb-4">
+        {/* Top-right controls: sign out + theme toggle */}
+        <div className="mb-8 flex items-center justify-end gap-3">
+          <button
+            onClick={toggleTheme}
+            aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+            className="flex items-center justify-center rounded-full p-2"
+            style={{ color: "var(--text-dim)", background: "var(--surface-hi)", border: "1px solid var(--border)" }}
           >
-            Provenance
-          </h1>
-          <p className="mt-1 text-sm" style={{ color: "var(--text-secondary)" }}>
-            Your social media command center.
-          </p>
+            {theme === "dark"
+              ? <Sun size={14} strokeWidth={1.8} />
+              : <Moon size={14} strokeWidth={1.8} />}
+          </button>
+          <form action="/auth/signout" method="post">
+            <button
+              type="submit"
+              className="flex items-center justify-center rounded-full p-2"
+              style={{ color: "var(--text-dim)", background: "var(--surface-hi)", border: "1px solid var(--border)" }}
+              aria-label="Sign out"
+            >
+              <LogOut size={14} strokeWidth={1.8} />
+            </button>
+          </form>
         </div>
+
+        <ScreenEyebrow
+          label="COMMAND CENTER"
+          title="Provenance"
+          subtitle="Your social media command center."
+        />
 
         <OverviewCards summary={summary} />
 
-        <div className="flex flex-wrap gap-3">
-          <Link
-            href="/studio"
-            className="rounded-md px-4 py-2 text-sm font-medium hover:opacity-90 transition-colors"
-            style={{ background: "var(--gold)", color: "var(--bg)" }}
-          >
-            Go to Studio
-          </Link>
+        {/* Full-width teal CTA */}
+        <div className="mt-6">
           <Link
             href="/board"
-            className="rounded-md px-4 py-2 text-sm font-medium hover:opacity-90 transition-colors"
-            style={{ background: "var(--surface-hi)", color: "var(--text-primary)", border: "1px solid var(--border)" }}
+            className="block w-full rounded py-3 text-center text-sm font-medium transition-opacity hover:opacity-90"
+            style={{ background: "var(--gold)", color: "var(--on-accent)" }}
           >
             Go to Board
           </Link>
         </div>
       </main>
-    </div>
+    </AppShell>
   );
 }

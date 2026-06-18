@@ -90,3 +90,55 @@ export function deriveOccasions(guests: GuestRecord[]): Occasion[] {
   all.sort((a, b) => a.days_away - b.days_away);
   return all;
 }
+
+// Resolve the single soonest occasion for one guest whose next occurrence falls
+// within `withinDays` of today (0 = today, inclusive). Returns its type, or null
+// if none are coming up that soon.
+//
+// Unlike deriveOccasions (which only looks at the rest of THIS calendar year),
+// this wraps across the year boundary: a birthday on Jan 3 still counts as
+// "upcoming" when today is Dec 28. Used by generation to auto-acknowledge a
+// near-term occasion even when the caller did not explicitly pass one — e.g. a
+// Campaigns "Run" that would otherwise send a generic win-back to someone whose
+// birthday is in three days.
+export function upcomingOccasionType(
+  guest: GuestRecord,
+  withinDays = 30
+): OccasionType | null {
+  const today = todayUtc();
+  const year = parseInt(today.slice(0, 4), 10);
+
+  // Iterated in priority order so equidistant occasions break the tie the same
+  // way pickAngle does: birthday > anniversary > first-visit anniversary.
+  const sources: Array<{ field: string | null; type: OccasionType }> = [
+    { field: guest.birthday,         type: "birthday" },
+    { field: guest.anniversary,      type: "anniversary" },
+    { field: guest.first_visit_date, type: "first_visit_anniversary" },
+  ];
+
+  let best: { type: OccasionType; days: number } | null = null;
+
+  for (const { field, type } of sources) {
+    if (!field) continue;
+    const md = monthDay(field);
+    if (!md) continue;
+
+    // Project to this year; if that date already passed, roll to next year so
+    // the window can straddle Dec → Jan.
+    let projected = projectToThisYear(year, md.month, md.day);
+    let days = daysAway(today, projected);
+    if (days < 0) {
+      projected = projectToThisYear(year + 1, md.month, md.day);
+      days = daysAway(today, projected);
+    }
+
+    if (days < 0 || days > withinDays) continue;
+
+    // Keep the soonest; ties keep the earlier (higher-priority) source.
+    if (best === null || days < best.days) {
+      best = { type, days };
+    }
+  }
+
+  return best ? best.type : null;
+}

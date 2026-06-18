@@ -15,6 +15,7 @@ import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { GuestRecord, OccasionType } from "./types";
 import { extractFacts }  from "./extract-facts";
+import { upcomingOccasionType } from "./occasions";
 import { pickAngle }     from "./pick-angle";
 import { writeEmail }    from "./write-email";
 import { guardFacts }    from "./guard-facts";
@@ -74,7 +75,11 @@ export async function generateOne(
   }
 
   // 4 + 5. Extract facts and pick angle.
-  const facts  = extractFacts(g, occasionType);
+  // If the caller named an occasion (e.g. the Occasions tab "Draft" button), use
+  // it. Otherwise auto-detect one coming up within the month so a Campaigns "Run"
+  // doesn't send a generic win-back to someone whose birthday is in three days.
+  const occ = occasionType ?? upcomingOccasionType(g, 30);
+  const facts  = extractFacts(g, occ);
   const { angle, tone_note } = pickAngle(facts);
 
   let subject: string;
@@ -109,7 +114,7 @@ export async function generateOne(
 
   const draft = await createDraft({
     guest_id:       guestId,
-    occasion_type:  occasionType,
+    occasion_type:  occ,
     angle,
     subject,
     body,
@@ -120,7 +125,7 @@ export async function generateOne(
           tenure:          facts.tenure,
           spend_tier:      facts.spend_tier,
           has_notes:       !!facts.notes,
-          occasion:        occasionType,
+          occasion:        occ,
         }
       : null,
   });

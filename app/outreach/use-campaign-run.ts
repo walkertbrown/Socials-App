@@ -137,9 +137,11 @@ export function useCampaignRun(bucket: "personalized" | "standard", onComplete?:
     await runBatch(ids, cursor);
   }
 
+  // Only offer "generate next 100" after a clean batch — NOT when credits are
+  // exhausted (continuing would immediately hit the quota again; the quota
+  // message tells the user to top up, then re-run).
   const canContinue =
-    (runState === "done" || runState === "quota_exhausted") &&
-    (progress?.total ?? 0) >= BATCH_CAP;
+    runState === "done" && (progress?.total ?? 0) >= BATCH_CAP;
 
   return {
     runState,

@@ -23,8 +23,10 @@ const INVENTED_SPECIFICS_PATTERNS: RegExp[] = [
   // References to specific dishes that sound made-up (heuristic: long food nouns)
   // We allow generic food words but flag "your [adjective] [dish]" constructs.
   /\byour\s+\w+\s+(steak|lobster|foie|tartare|tuna|duck|lamb|scallops?)\b/i,
-  // Server or staff names (capitalized name following "your server" / "ask for")
-  /\b(your\s+server|ask\s+for)\s+[A-Z][a-z]+\b/,
+  // Server or staff names following "your server" / "ask for" — case-insensitive
+  // (an LLM writes "Ask for Michelle" / "Your server Tracy"); skip common
+  // non-name continuations ("ask for the menu", "ask for details").
+  /\b(?:your\s+server|ask\s+for)\s+(?!the\b|a\b|an\b|our\b|your\b|us\b|it\b|me\b|them\b|any\b|more\b|info\b|details?\b|recommendations?\b)[a-z][a-z']+/i,
   // Invented specific dates ("on March 12th", "last Saturday the 8th")
   /\bon\s+(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d+/i,
 ];
@@ -49,15 +51,17 @@ export function guardFacts(
   facts: GuestFactSet
 ): GuardResult {
   const text = `${draft.subject}\n${draft.body}`;
-  const _allowed = buildAllowedWords(facts); // reserved for future stricter check
+  const allowed = buildAllowedWords(facts);
 
   for (const pattern of INVENTED_SPECIFICS_PATTERNS) {
-    if (pattern.test(text)) {
-      return {
-        passed: false,
-        reason: `Likely hallucination: pattern "${pattern.source}" matched in draft`,
-      };
-    }
+    const m = text.match(pattern);
+    if (!m) continue;
+    // If every meaningful word in the matched span is actually on file (in the
+    // guest's notes/name), it's a real detail, not a hallucination — don't flag.
+    // (Dollar amounts produce no such words, so "$250" is always flagged.)
+    const words = m[0].toLowerCase().match(/[a-z]{4,}/g) ?? [];
+    if (words.length > 0 && words.every((w) => allowed.has(w))) continue;
+    return { passed: false, reason: `Likely hallucination: "${m[0].trim()}"` };
   }
 
   return { passed: true };

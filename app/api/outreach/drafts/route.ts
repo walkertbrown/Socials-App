@@ -8,7 +8,8 @@
 
 import { NextResponse } from "next/server";
 import { getUserOrNull } from "@/lib/auth/require-user";
-import { listSendoffDrafts } from "@/lib/db/outreach-drafts";
+import { listSendoffDrafts, clearAllDrafts } from "@/lib/db/outreach-drafts";
+import { resetVerifyStatuses } from "@/lib/db/guests";
 
 export const runtime = "nodejs";
 
@@ -25,5 +26,21 @@ export async function GET() {
       { error: (err as Error).message },
       { status: 500 }
     );
+  }
+}
+
+// DELETE /api/outreach/drafts — "clear & start over": wipe all drafts and reset
+// every guest's verify status so a re-run regenerates from a clean slate.
+export async function DELETE() {
+  const user = await getUserOrNull();
+  if (!user) return new NextResponse("Unauthorized", { status: 401 });
+
+  try {
+    const cleared = await clearAllDrafts();
+    await resetVerifyStatuses();
+    return NextResponse.json({ cleared });
+  } catch (err) {
+    console.error("[outreach/drafts DELETE] error:", err);
+    return NextResponse.json({ error: (err as Error).message }, { status: 500 });
   }
 }

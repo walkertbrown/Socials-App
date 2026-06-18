@@ -12,6 +12,21 @@ export function SendoffView() {
   const [drafts, setDrafts]   = useState<DraftWithGuest[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState<string | null>(null);
+  const [clearing, setClearing] = useState(false);
+
+  async function handleClear() {
+    if (!confirm("Clear ALL drafts and reset verification, so you can regenerate from scratch? This can't be undone.")) return;
+    setClearing(true);
+    try {
+      const res = await fetch("/api/outreach/drafts", { method: "DELETE" });
+      if (!res.ok) throw new Error(await res.text());
+      setDrafts([]);
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setClearing(false);
+    }
+  }
 
   // Load drafts on mount.
   useEffect(() => {
@@ -98,9 +113,23 @@ export function SendoffView() {
         }}
       >
         <p style={{ fontSize: 13, color: "var(--text-secondary)", margin: 0 }}>
-          {drafts.length} draft{drafts.length !== 1 ? "s" : ""} —{" "}
-          {approvedCount} approved
+          {drafts.length} draft{drafts.length !== 1 ? "s" : ""}, {approvedCount} approved
         </p>
+        <button
+          onClick={handleClear}
+          disabled={clearing}
+          style={{
+            padding:      "6px 12px",
+            border:       "1px solid var(--border-hi)",
+            borderRadius: 6,
+            background:   "var(--surface-hi)",
+            color:        "var(--text-dim)",
+            fontSize:     12,
+            cursor:       clearing ? "not-allowed" : "pointer",
+          }}
+        >
+          {clearing ? "Clearing…" : "Clear all & start over"}
+        </button>
       </div>
 
       {drafts.map((draft) => (

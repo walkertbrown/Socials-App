@@ -119,6 +119,17 @@ export async function setVerifyStatus(
   }
 }
 
+// Reset every guest's verification status (part of "clear & start over" so a
+// re-run verifies fresh). No-op if the table is absent.
+export async function resetVerifyStatuses(): Promise<void> {
+  const sb = createAdminClient();
+  const { error } = await sb
+    .from("guests")
+    .update({ email_verify_status: null, email_verified_at: null })
+    .gte("created_at", "2000-01-01"); // matches every row
+  if (error && error.code !== "42P01") throw new Error(error.message);
+}
+
 // Fetch opted-in guests in a bucket that are ready for a generation run.
 // "Needs work" = valid verify status (or unverified, so the verify step can run)
 // and no existing draft. Used by the Run loop to build the work queue.

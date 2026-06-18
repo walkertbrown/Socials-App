@@ -118,6 +118,21 @@ export async function hasReadyDraft(guestId: string): Promise<boolean> {
   }
 }
 
+// Delete ALL drafts (the "clear & start over" action for tuning). Returns count.
+export async function clearAllDrafts(): Promise<number> {
+  const sb = createAdminClient();
+  const { data, error } = await sb
+    .from("outreach_drafts")
+    .delete()
+    .gte("created_at", "2000-01-01") // matches every row (PostgREST requires a filter)
+    .select("id");
+  if (error) {
+    if (error.code === "42P01") return 0;
+    throw new Error(error.message);
+  }
+  return (data ?? []).length;
+}
+
 // ── Update ────────────────────────────────────────────────────────────────────
 
 export interface UpdateDraftInput {

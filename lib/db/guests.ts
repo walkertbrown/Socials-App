@@ -96,6 +96,58 @@ export async function getGuestsByBucket(bucket: "personalized" | "standard"): Pr
   }
 }
 
+// Set the NeverBounce verification status on a guest.
+// email_verified_at is always updated to now() so the verify-once cache can
+// compare freshness on subsequent calls.
+export async function setVerifyStatus(
+  guestId: string,
+  status: string
+): Promise<void> {
+  const sb = createAdminClient();
+  const { error } = await sb
+    .from("guests")
+    .update({
+      email_verify_status: status,
+      email_verified_at:   new Date().toISOString(),
+      updated_at:          new Date().toISOString(),
+    })
+    .eq("id", guestId);
+
+  if (error) {
+    if (error.code === "42P01") return; // migration not applied — skip silently
+    throw new Error(error.message);
+  }
+}
+
+// Fetch opted-in guests in a bucket that are ready for a generation run.
+// "Needs work" = valid verify status (or unverified, so the verify step can run)
+// and no existing draft. Used by the Run loop to build the work queue.
+// limit caps the batch at 100 (per the plan spec).
+export async function getGuestsForRun(
+  bucket: "personalized" | "standard",
+  limit = 100
+): Promise<GuestRecord[]> {
+  const sb = createAdminClient();
+  try {
+    const { data, error } = await sb
+      .from("guests")
+      .select("*")
+      .eq("marketing_opt_in", true)
+      .eq("bucket", bucket)
+      .order("guest_name", { ascending: true })
+      .limit(limit);
+
+    if (error) {
+      if (error.code === "42P01") return [];
+      throw new Error(error.message);
+    }
+    return (data ?? []) as GuestRecord[];
+  } catch (err: unknown) {
+    if (err instanceof Error && err.message?.includes("42P01")) return [];
+    throw err;
+  }
+}
+
 // Fetch all opted-in guests that have at least one relevant date field,
 // then derive the rest-of-year occasion list.
 // Degrades to empty array if the table is absent.

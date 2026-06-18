@@ -1,7 +1,7 @@
 "use client";
 
 // BottomTabBar — fixed bottom nav for all hero screens.
-// 4 tabs: Overview · Studio · Board · Insights.
+// 5 tabs: Overview · Studio · Board · Insights · Outreach.
 // Active tab renders in --gold (teal). Clears iOS home indicator via safe-area inset.
 // Desktop: centered with max-width so it doesn't stretch edge-to-edge.
 //
@@ -10,7 +10,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Sparkles, Grid2x2, BarChart2 } from "lucide-react";
+import { LayoutDashboard, Sparkles, Grid2x2, BarChart2, Mail } from "lucide-react";
 
 // Routes that belong under a non-direct-match parent tab.
 const STUDIO_SUB_ROUTES = ["/compose", "/create", "/posts", "/menu", "/post"];
@@ -20,6 +20,7 @@ const TABS = [
   { href: "/studio",    label: "Studio",    Icon: Sparkles },
   { href: "/board",     label: "Board",     Icon: Grid2x2 },
   { href: "/insights",  label: "Insights",  Icon: BarChart2 },
+  { href: "/outreach",  label: "Outreach",  Icon: Mail },
 ] as const;
 
 export function BottomTabBar() {

@@ -58,7 +58,7 @@ export function useCampaignRun(bucket: "personalized" | "standard", onComplete?:
       };
 
       if (verJson.quota_exhausted) {
-        setQuotaMsg(verJson.message ?? "NeverBounce credits exhausted — top up to continue");
+        setQuotaMsg(verJson.message ?? "Email-verification limit reached — resets daily, or add credits.");
         setRunState("quota_exhausted");
         setProgress({ ...prog });
         return;

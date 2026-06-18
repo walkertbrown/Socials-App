@@ -1,16 +1,17 @@
 import "server-only";
 
-// verify-email.ts — calls the NeverBounce single-verify API for one address.
+// verify-email.ts — calls the MyEmailVerifier single-verify API for one address.
 // Returns a normalized status. Never called from CSV import; only from the
 // API route that gates generation.
 //
-// NeverBounce result → our status mapping:
-//   valid       → "valid"
-//   invalid     → "invalid"
-//   disposable  → "invalid"    (treat as invalid to skip)
-//   catchall    → "catchall"
-//   unknown     → "unknown"
-//   quota/credits error → caller receives "quota_exhausted" flag
+// MyEmailVerifier "Status" → our status mapping:
+//   Valid                        → "valid"    (but catch_all=true → "catchall")
+//   Invalid / Disposable_Domain  → "invalid"  (treat as invalid, skip)
+//   Catch All / catch_all=true   → "catchall"
+//   Unknown / Greylisted / other → "unknown"
+//   missing Status / API error   → "unknown"; a credit/daily-limit error → quota_exhausted flag
+//
+// Free tier: 100 verifications/day, no card. Key read from MYEMAILVERIFIER_API_KEY.
 
 export type VerifyStatus = "valid" | "invalid" | "catchall" | "unknown" | "not_configured";
 
@@ -19,64 +20,55 @@ export interface VerifyResult {
   quota_exhausted?: boolean;
 }
 
-// NeverBounce single-verify endpoint.
-const NB_URL = "https://api.neverbounce.com/v4/single/check";
+const MEV_URL = "https://api.myemailverifier.com/api/validate_single.php";
 
 export async function verifyEmail(email: string): Promise<VerifyResult> {
-  const apiKey = process.env.NEVERBOUNCE_API_KEY;
+  const apiKey = process.env.MYEMAILVERIFIER_API_KEY;
   if (!apiKey) {
     return { status: "not_configured" };
   }
 
-  let data: unknown;
+  let data: Record<string, unknown> = {};
+  let rawText = "";
   try {
-    const url = new URL(NB_URL);
-    url.searchParams.set("key", apiKey);
+    const url = new URL(MEV_URL);
+    url.searchParams.set("apikey", apiKey);
     url.searchParams.set("email", email);
-    url.searchParams.set("credits_info", "0");
-    url.searchParams.set("timeout", "5");
-
     const res = await fetch(url.toString(), { method: "GET" });
-    data = await res.json();
+    rawText = await res.text();
+    try { data = JSON.parse(rawText); } catch { data = {}; }
   } catch (err) {
-    // Network failure or non-JSON body — return unknown so we don't block the batch.
-    console.warn("[verify-email] NeverBounce fetch error:", err);
+    // Network/parse failure — return unknown so we don't block the batch.
+    console.warn("[verify-email] MyEmailVerifier fetch error:", err);
     return { status: "unknown" };
   }
 
-  const d = data as Record<string, unknown>;
+  const status = String(data.Status ?? "").trim();
 
-  // NeverBounce quota/credits exhaustion returns a non-"success" status with
-  // a specific error code or message we detect here.
-  if (
-    d.status !== "success" &&
-    (String(d.message ?? "").toLowerCase().includes("credit") ||
-      String(d.message ?? "").toLowerCase().includes("quota") ||
-      d.status === "auth_failure")
-  ) {
-    return { status: "unknown", quota_exhausted: true };
-  }
-
-  if (d.status !== "success") {
-    // Any other API-level error → return unknown, log it.
-    console.warn("[verify-email] NeverBounce non-success:", d.status, d.message);
+  // No Status field = an error payload. MyEmailVerifier's error format isn't
+  // documented, so sniff the body for a credit/daily-limit/key problem and
+  // surface it as quota_exhausted (the run pauses gracefully); otherwise unknown.
+  if (!status) {
+    const blob = (rawText + " " + JSON.stringify(data)).toLowerCase();
+    if (/credit|limit|quota|exceed|insufficient|upgrade|api ?key|unauthor/.test(blob)) {
+      return { status: "unknown", quota_exhausted: true };
+    }
+    console.warn("[verify-email] MyEmailVerifier no Status in response:", rawText.slice(0, 200));
     return { status: "unknown" };
   }
 
-  const result = String(d.result ?? "unknown");
-  return { status: mapResult(result) };
+  return { status: mapResult(status, data) };
 }
 
-function mapResult(result: string): VerifyStatus {
-  switch (result) {
-    case "valid":
-      return "valid";
-    case "invalid":
-    case "disposable":
-      return "invalid";
-    case "catchall":
-      return "catchall";
-    default:
-      return "unknown";
-  }
+function truthy(v: unknown): boolean {
+  return String(v ?? "").trim().toLowerCase() === "true";
+}
+
+function mapResult(status: string, data: Record<string, unknown>): VerifyStatus {
+  const s = status.toLowerCase();
+  if (truthy(data.Disposable_Domain)) return "invalid";
+  if (truthy(data.Catch_all) || truthy(data.catch_all) || s.includes("catch")) return "catchall";
+  if (s === "valid") return "valid";
+  if (s === "invalid") return "invalid";
+  return "unknown"; // Unknown, Greylisted, Role-based handled by caller, etc.
 }

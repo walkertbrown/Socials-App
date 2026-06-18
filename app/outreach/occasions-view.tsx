@@ -53,7 +53,7 @@ function OccasionRow({ occ }: OccasionRowProps) {
       });
       const json = await res.json() as { status: string; quota_exhausted?: boolean; message?: string };
       if (json.quota_exhausted) {
-        setMessage(json.message ?? "NeverBounce credits exhausted");
+        setMessage(json.message ?? "Email-verification limit reached.");
         setState("error");
         return;
       }

@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  // Call NeverBounce.
+  // Call the email verifier (MyEmailVerifier).
   const result = await verifyEmail(guest.email);
 
   // Graceful quota exhaustion: store 'pending' so we don't retry endlessly.
@@ -82,7 +82,7 @@ export async function POST(request: NextRequest) {
       guest_id,
       status:          "pending",
       quota_exhausted: true,
-      message:         "NeverBounce credits exhausted — top up to continue",
+      message:         "Email-verification limit reached. The free tier resets daily (100/day) — continue tomorrow, or add credits.",
     });
   }
 

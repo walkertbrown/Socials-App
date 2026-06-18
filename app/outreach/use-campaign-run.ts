@@ -27,7 +27,11 @@ async function fetchGuestIds(bucket: string, offset: number): Promise<string[]> 
   return json.ids;
 }
 
-export function useCampaignRun(bucket: "personalized" | "standard", onComplete?: () => void) {
+export function useCampaignRun(
+  bucket: "personalized" | "standard",
+  onComplete?: () => void,
+  skipVerify = false
+) {
   const [runState, setRunState]    = useState<RunState>("idle");
   const [progress, setProgress]    = useState<RunProgress | null>(null);
   const [error, setError]          = useState<string | null>(null);
@@ -45,37 +49,40 @@ export function useCampaignRun(bucket: "personalized" | "standard", onComplete?:
     setProgress({ ...prog });
 
     for (const id of ids) {
-      // Step 1: verify (sequential, never parallel).
-      const verRes = await fetch("/api/outreach/verify", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ guest_id: id }),
-      });
-      const verJson = (await verRes.json()) as {
-        status: string;
-        quota_exhausted?: boolean;
-        message?: string;
-      };
+      if (!skipVerify) {
+        // Step 1: verify (sequential, never parallel).
+        const verRes = await fetch("/api/outreach/verify", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ guest_id: id }),
+        });
+        const verJson = (await verRes.json()) as {
+          status: string;
+          quota_exhausted?: boolean;
+          message?: string;
+        };
 
-      if (verJson.quota_exhausted) {
-        setQuotaMsg(verJson.message ?? "Email-verification limit reached — resets daily, or add credits.");
-        setRunState("quota_exhausted");
-        setProgress({ ...prog });
-        return;
+        if (verJson.quota_exhausted) {
+          setQuotaMsg(verJson.message ?? "Email-verification limit reached — resets daily, or add credits.");
+          setRunState("quota_exhausted");
+          setProgress({ ...prog });
+          return;
+        }
+
+        if (verJson.status === "invalid") {
+          prog.skipped++;
+          prog.processed++;
+          setProgress({ ...prog });
+          continue;
+        }
       }
 
-      if (verJson.status === "invalid") {
-        prog.skipped++;
-        prog.processed++;
-        setProgress({ ...prog });
-        continue;
-      }
-
-      // Step 2: generate draft.
+      // Step 2: generate draft (skipVerify passed through so the server-side gate
+      // is also bypassed when testing).
       const genRes = await fetch("/api/outreach/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ guest_id: id }),
+        body: JSON.stringify({ guest_id: id, skipVerify }),
       });
 
       if (!genRes.ok) {

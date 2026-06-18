@@ -53,6 +53,9 @@ export async function createDraft(input: CreateDraftInput): Promise<OutreachDraf
 export interface DraftWithGuest extends OutreachDraft {
   guest_name: string | null;
   guest_email: string;
+  recent_visit_date: string | null;
+  first_visit_date: string | null;
+  completed_visits: number | null;
 }
 
 export async function listSendoffDrafts(): Promise<DraftWithGuest[]> {
@@ -62,7 +65,7 @@ export async function listSendoffDrafts(): Promise<DraftWithGuest[]> {
       .from("outreach_drafts")
       .select(`
         *,
-        guests!inner ( guest_name, email )
+        guests!inner ( guest_name, email, recent_visit_date, first_visit_date, completed_visits )
       `)
       .in("status", ["draft", "approved"])
       .order("created_at", { ascending: false });
@@ -73,11 +76,18 @@ export async function listSendoffDrafts(): Promise<DraftWithGuest[]> {
     }
 
     return ((data ?? []) as Record<string, unknown>[]).map((row) => {
-      const guest = row.guests as { guest_name: string | null; email: string };
+      const guest = row.guests as {
+        guest_name: string | null; email: string;
+        recent_visit_date: string | null; first_visit_date: string | null;
+        completed_visits: number | null;
+      };
       return {
         ...(row as unknown as OutreachDraft),
-        guest_name:  guest.guest_name,
-        guest_email: guest.email,
+        guest_name:        guest.guest_name,
+        guest_email:       guest.email,
+        recent_visit_date: guest.recent_visit_date,
+        first_visit_date:  guest.first_visit_date,
+        completed_visits:  guest.completed_visits,
       };
     });
   } catch (err: unknown) {

@@ -104,6 +104,9 @@ export function EmailCard({ draft, onUpdated }: Props) {
             {draft.guest_email}
           </span>
         )}
+        {visitInfo(draft) && (
+          <span style={{ fontSize: 12, color: "var(--text-secondary)" }}>· {visitInfo(draft)}</span>
+        )}
 
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginLeft: "auto" }}>
           {draft.angle && (
@@ -218,6 +221,23 @@ export function EmailCard({ draft, onUpdated }: Props) {
       </div>
     </div>
   );
+}
+
+// "Last visit Mar 14, 2026 (3mo ago) · 7 visits" — so the reviewer can see recency.
+function visitInfo(d: DraftWithGuest): string | null {
+  const iso = d.recent_visit_date;
+  if (!iso) return d.completed_visits ? `${d.completed_visits} visits on record` : null;
+  const dt = new Date(iso.length <= 10 ? `${iso}T00:00:00Z` : iso);
+  if (isNaN(dt.getTime())) return null;
+  const date = dt.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
+  const days = Math.floor((Date.now() - dt.getTime()) / 86400000);
+  const ago =
+    days <= 0 ? "today" :
+    days < 31 ? `${days}d ago` :
+    days < 365 ? `${Math.round(days / 30)}mo ago` :
+    `${(days / 365).toFixed(1)}y ago`;
+  const v = d.completed_visits ? ` · ${d.completed_visits} visit${d.completed_visits === 1 ? "" : "s"}` : "";
+  return `Last visit ${date} (${ago})${v}`;
 }
 
 // ── Chip ──────────────────────────────────────────────────────────────────────

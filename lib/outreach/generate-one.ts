@@ -19,6 +19,7 @@ import { pickAngle }     from "./pick-angle";
 import { writeEmail }    from "./write-email";
 import { guardFacts }    from "./guard-facts";
 import { mergeTemplate } from "./templates";
+import { stripDashes } from "./sanitize";
 import { createDraft, hasReadyDraft } from "@/lib/db/outreach-drafts";
 
 export interface GenerateResult {
@@ -53,8 +54,8 @@ export async function generateOne(
   }
 
   // 3. Email must be verified valid — skip anything else (invalid, unknown, catchall).
-  // Note: 'not_configured' means NeverBounce key is absent; we allow generation
-  // to proceed anyway so the feature works without NeverBounce configured.
+  // Note: 'not_configured' means the verifier key is absent; we allow generation
+  // to proceed anyway so the feature works without verification configured.
   const verifyStatus = g.email_verify_status;
   if (
     verifyStatus !== null &&
@@ -97,7 +98,11 @@ export async function generateOne(
     body    = tpl.body;
   }
 
-  // 7. Store draft. personalized_from captures what facts drove the angle.
+  // 7. Sanitize (guaranteed no em/en dashes ship, whatever the model produced),
+  //    then store. personalized_from captures what facts drove the angle.
+  subject = stripDashes(subject);
+  body    = stripDashes(body);
+
   const draft = await createDraft({
     guest_id:       guestId,
     occasion_type:  occasionType,

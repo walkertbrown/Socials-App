@@ -1,8 +1,6 @@
 // Pure date-math helpers for the insights time-window selector.
 // No DB or API calls here — just range computation.
 
-import { getCurrentMondayChicago } from "@/lib/report/compute-week";
-
 export type WindowKey = "daily" | "weekly" | "monthly" | "alltime";
 
 export interface WindowRange {
@@ -36,6 +34,21 @@ function todayMidnightChicago(): Date {
   return new Date(now.getTime() - msSinceMidnight);
 }
 
+// Return the Monday of the current week in America/Chicago.
+// Inlined here (rather than imported from compute-week) so this module
+// stays free of `server-only` and can be used by client components.
+function currentMondayChicago(): Date {
+  const now = new Date();
+  const chicagoStr = now.toLocaleString("en-US", { timeZone: "America/Chicago" });
+  const chicago = new Date(chicagoStr);
+  const dow = chicago.getDay(); // 0=Sun, 1=Mon, ...
+  const daysBack = dow === 0 ? 6 : dow - 1;
+  const monday = new Date(chicago);
+  monday.setDate(chicago.getDate() - daysBack);
+  monday.setHours(0, 0, 0, 0);
+  return monday;
+}
+
 // Return the since/until Unix timestamps (seconds) for a given window key.
 // "alltime" is a stored-data window — no live Meta call needed.
 // Return since=0, until=0 as a sentinel; the caller must handle it differently.
@@ -57,7 +70,7 @@ export function windowRange(key: WindowKey): WindowRange {
   }
 
   if (key === "weekly") {
-    const monday = getCurrentMondayChicago();
+    const monday = currentMondayChicago();
     return {
       since: Math.floor(monday.getTime() / 1000),
       until: nowSec,

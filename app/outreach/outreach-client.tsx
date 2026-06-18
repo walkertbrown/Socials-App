@@ -81,6 +81,9 @@ export function OutreachClient({ initialBucketCounts, initialOccasions }: Props)
           <CampaignsView
             bucketCounts={bucketCounts}
             onIngestComplete={(counts) => setBucketCounts(counts)}
+            onRunComplete={() => {
+              // Nudge user to check Send-off (no auto-nav — they may be mid-batch).
+            }}
           />
         )}
         {activeTab === "sendoff" && <SendoffView />}

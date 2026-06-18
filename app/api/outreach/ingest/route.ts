@@ -37,8 +37,8 @@ export async function POST(request: NextRequest) {
   if (body.length > MAX_ROWS) {
     return NextResponse.json(
       {
-        error: `Payload too large: ${body.length} rows exceeds the ${MAX_ROWS}-row limit. ` +
-               "Filter to opted-in guests only before uploading.",
+        error: `Too many rows (${body.length}). Upload one recency tier/cohort at a time ` +
+               `(max ${MAX_ROWS.toLocaleString()}) — e.g. your last-365-day warm list — not the full export.`,
       },
       { status: 413 }
     );

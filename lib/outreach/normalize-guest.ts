@@ -4,13 +4,27 @@
 import type { RawGuestRow, NormalizedGuest } from "./types";
 import { assignBucket } from "./segment-guests";
 
-// GuestCenter exports dates as "YYYY-MM-DDTHH:MM:SS" (or similar ISO-ish).
-// We only need the date portion (YYYY-MM-DD) for our DB date columns.
+const MONTHS: Record<string, string> = {
+  jan: "01", feb: "02", mar: "03", apr: "04", may: "05", jun: "06",
+  jul: "07", aug: "08", sep: "09", oct: "10", nov: "11", dec: "12",
+};
+
+// GuestCenter stores dates in TWO shapes:
+//  • visit dates → ISO-ish "YYYY-MM-DDTHH:MM:SS" — take the date portion.
+//  • birthday / anniversary → "Mmm D" / "Mmm DD" (month name + day, NO year).
+//    We store these with a sentinel leap year (2000) so Feb 29 is valid; only the
+//    month+day is ever used — the Occasions view projects them onto the current year.
 function parseDate(raw: string): string | null {
   if (!raw?.trim()) return null;
-  // Accept "YYYY-MM-DD..." — take just the date portion.
-  const match = raw.trim().match(/^(\d{4}-\d{2}-\d{2})/);
-  return match ? match[1] : null;
+  const s = raw.trim();
+  const iso = s.match(/^(\d{4}-\d{2}-\d{2})/);
+  if (iso) return iso[1];
+  const md = s.match(/^([A-Za-z]{3,})\.?\s+(\d{1,2})$/); // "Dec 30", "Jan 11"
+  if (md) {
+    const mm = MONTHS[md[1].slice(0, 3).toLowerCase()];
+    if (mm) return `2000-${mm}-${md[2].padStart(2, "0")}`;
+  }
+  return null;
 }
 
 function parseOptIn(raw: string): boolean {

@@ -31,10 +31,16 @@ export async function upsertGuests(rows: NormalizedGuest[]): Promise<void> {
     updated_at:       new Date().toISOString(),
   }));
 
-  await sb
+  const { error } = await sb
     .from("guests")
-    .upsert(records, { onConflict: "email" })
-    .throwOnError();
+    .upsert(records, { onConflict: "email" });
+  if (error) {
+    // Table absent (migration 0016 not applied) → clean, actionable message.
+    if (error.code === "42P01") {
+      throw new Error("Outreach tables not created yet — apply migration 0016_outreach.sql.");
+    }
+    throw error;
+  }
 }
 
 // Per-bucket counts. Degrades to zero counts if the table is absent.

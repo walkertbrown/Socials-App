@@ -159,6 +159,30 @@ export async function getGuestsForRun(
   }
 }
 
+// Fetch all opted-in guests for the Email List view. Ordered by most-recent
+// visit first (nulls last). Caps at `limit` rows (default 2000) to avoid
+// rendering thousands of rows in the browser. Degrades to [] if table absent.
+export async function listAllGuests(limit = 2000): Promise<GuestRecord[]> {
+  const sb = createAdminClient();
+  try {
+    const { data, error } = await sb
+      .from("guests")
+      .select("*")
+      .eq("marketing_opt_in", true)
+      .order("recent_visit_date", { ascending: false, nullsFirst: false })
+      .limit(limit);
+
+    if (error) {
+      if (error.code === "42P01") return [];
+      throw new Error(error.message);
+    }
+    return (data ?? []) as GuestRecord[];
+  } catch (err: unknown) {
+    if (err instanceof Error && err.message?.includes("42P01")) return [];
+    throw err;
+  }
+}
+
 // Fetch all opted-in guests that have at least one relevant date field,
 // then derive the rest-of-year occasion list.
 // Degrades to empty array if the table is absent.

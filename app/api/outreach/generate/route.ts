@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
     return new NextResponse("Invalid JSON", { status: 400 });
   }
 
-  const { guest_id, occasion_type } = (body as Record<string, unknown>);
+  const { guest_id, occasion_type, skipVerify } = (body as Record<string, unknown>);
   if (typeof guest_id !== "string") {
     return new NextResponse("guest_id required", { status: 400 });
   }
@@ -48,8 +48,10 @@ export async function POST(request: NextRequest) {
     parsedOccasion = occasion_type as OccasionType;
   }
 
+  const shouldSkipVerify = skipVerify === true;
+
   try {
-    const result = await generateOne(guest_id, parsedOccasion);
+    const result = await generateOne(guest_id, parsedOccasion, shouldSkipVerify);
     return NextResponse.json(result);
   } catch (err) {
     console.error(`[outreach/generate] guest ${guest_id} failed:`, err);

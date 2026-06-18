@@ -31,7 +31,8 @@ export interface GenerateResult {
 
 export async function generateOne(
   guestId: string,
-  occasionType: OccasionType | null = null
+  occasionType: OccasionType | null = null,
+  skipVerify = false
 ): Promise<GenerateResult> {
   const sb = createAdminClient();
 
@@ -56,17 +57,20 @@ export async function generateOne(
   // 3. Email must be verified valid — skip anything else (invalid, unknown, catchall).
   // Note: 'not_configured' means the verifier key is absent; we allow generation
   // to proceed anyway so the feature works without verification configured.
-  const verifyStatus = g.email_verify_status;
-  if (
-    verifyStatus !== null &&
-    verifyStatus !== "valid" &&
-    verifyStatus !== "not_configured"
-  ) {
-    return {
-      guest_id: guestId,
-      status:   "invalid_email",
-      reason:   `email_verify_status=${verifyStatus}`,
-    };
+  // skipVerify=true bypasses this gate entirely (testing mode — no credits burned).
+  if (!skipVerify) {
+    const verifyStatus = g.email_verify_status;
+    if (
+      verifyStatus !== null &&
+      verifyStatus !== "valid" &&
+      verifyStatus !== "not_configured"
+    ) {
+      return {
+        guest_id: guestId,
+        status:   "invalid_email",
+        reason:   `email_verify_status=${verifyStatus}`,
+      };
+    }
   }
 
   // 4 + 5. Extract facts and pick angle.

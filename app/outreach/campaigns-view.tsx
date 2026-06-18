@@ -1,8 +1,9 @@
 "use client";
 
-// campaigns-view.tsx — CSV upload + two bucket cards with wired Run buttons.
+// campaigns-view.tsx — CSV upload + skip-verify toggle + two bucket cards with wired Run buttons.
 // Run logic is in use-campaign-run.ts (extracted to stay under 300 lines).
 
+import { useState } from "react";
 import { UploadCsv } from "@/app/outreach/upload-csv";
 import { useCampaignRun } from "@/app/outreach/use-campaign-run";
 import type { BucketCounts } from "@/lib/outreach/types";
@@ -14,6 +15,9 @@ interface Props {
 }
 
 export function CampaignsView({ bucketCounts, onIngestComplete, onRunComplete }: Props) {
+  // Default OFF — must be explicitly toggled on for testing.
+  const [skipVerify, setSkipVerify] = useState(false);
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
       <section>
@@ -37,12 +41,38 @@ export function CampaignsView({ bucketCounts, onIngestComplete, onRunComplete }:
           Guest buckets
         </h2>
 
+        {/* Skip-verification toggle — testing aid, default OFF */}
+        <label
+          style={{
+            display:    "flex",
+            alignItems: "center",
+            gap:        8,
+            marginBottom: 16,
+            cursor:     "pointer",
+            width:      "fit-content",
+          }}
+        >
+          <input
+            type="checkbox"
+            checked={skipVerify}
+            onChange={(e) => setSkipVerify(e.target.checked)}
+            style={{ cursor: "pointer", accentColor: "var(--gold)" }}
+          />
+          <span style={{ fontSize: 13, color: "var(--text-secondary)" }}>
+            Skip verification (for testing)
+          </span>
+          <span style={{ fontSize: 12, color: "var(--text-dim)" }}>
+            — generate without checking addresses, uses no verification credits
+          </span>
+        </label>
+
         <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
           <BucketCard
             label="Personalized"
             description="Guests with notes, tags, or preferences on file. Emails are crafted via AI using their details."
             count={bucketCounts.personalized}
             bucket="personalized"
+            skipVerify={skipVerify}
             onRunComplete={onRunComplete}
           />
           <BucketCard
@@ -50,6 +80,7 @@ export function CampaignsView({ bucketCounts, onIngestComplete, onRunComplete }:
             description="Guests without free-text notes. Emails use template text — zero LLM calls."
             count={bucketCounts.standard}
             bucket="standard"
+            skipVerify={skipVerify}
             onRunComplete={onRunComplete}
           />
         </div>
@@ -71,13 +102,14 @@ interface BucketCardProps {
   description:  string;
   count:        number;
   bucket:       "personalized" | "standard";
+  skipVerify:   boolean;
   onRunComplete?: () => void;
 }
 
-function BucketCard({ label, description, count, bucket, onRunComplete }: BucketCardProps) {
+function BucketCard({ label, description, count, bucket, skipVerify, onRunComplete }: BucketCardProps) {
   const {
     runState, progress, error, quotaMsg, canContinue, handleRun, handleContinue,
-  } = useCampaignRun(bucket, onRunComplete);
+  } = useCampaignRun(bucket, onRunComplete, skipVerify);
 
   const canRun = count > 0 && runState === "idle";
 

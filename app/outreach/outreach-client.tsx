@@ -10,9 +10,10 @@ import { ScreenEyebrow } from "@/components/screen-eyebrow";
 import { OccasionsView } from "@/app/outreach/occasions-view";
 import { CampaignsView } from "@/app/outreach/campaigns-view";
 import { SendoffView } from "@/app/outreach/sendoff-view";
+import { ListView } from "@/app/outreach/list-view";
 import type { BucketCounts, Occasion } from "@/lib/outreach/types";
 
-type Tab = "occasions" | "campaigns" | "sendoff";
+type Tab = "occasions" | "campaigns" | "list" | "sendoff";
 
 interface Props {
   initialBucketCounts: BucketCounts;
@@ -48,6 +49,7 @@ export function OutreachClient({ initialBucketCounts, initialOccasions }: Props)
             [
               { key: "occasions", label: "Occasions" },
               { key: "campaigns", label: "Campaigns" },
+              { key: "list",      label: "Email List" },
               { key: "sendoff",   label: "Send-off" },
             ] as { key: Tab; label: string }[]
           ).map(({ key, label }) => (
@@ -86,6 +88,7 @@ export function OutreachClient({ initialBucketCounts, initialOccasions }: Props)
             }}
           />
         )}
+        {activeTab === "list" && <ListView />}
         {activeTab === "sendoff" && <SendoffView />}
       </div>
     </AppShell>

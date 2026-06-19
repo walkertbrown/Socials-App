@@ -8,7 +8,6 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { WeeklyReport } from "@/lib/db/weekly-reports";
 import { AppShell } from "@/components/app-shell";
-import { ScreenEyebrow } from "@/components/screen-eyebrow";
 import type { WeekPayload } from "@/lib/report/compute-week";
 import type { DemographicsSnapshot } from "@/lib/meta/demographics";
 import { SnapshotBar } from "@/components/insights/snapshot-bar";
@@ -73,9 +72,7 @@ export function InsightsClient({ report, availableWeeks, userEmail: _userEmail =
     return (
       <AppShell>
         <div className="mx-auto flex w-full max-w-xl flex-1 flex-col gap-4 p-4">
-          <div className="pt-6">
-            <ScreenEyebrow label="REACH" title="Insights" />
-          </div>
+          <InsightsTitle eyebrow="Weekly report" />
           <InsightsHeader
             availableWeeks={availableWeeks}
             selectedWeek={selectedWeek}
@@ -105,9 +102,7 @@ export function InsightsClient({ report, availableWeeks, userEmail: _userEmail =
   return (
     <AppShell>
       <div className="mx-auto flex w-full max-w-xl flex-1 flex-col gap-4 p-4">
-        <div className="pt-6">
-          <ScreenEyebrow label="REACH" title="Insights" />
-        </div>
+        <InsightsTitle eyebrow={fmtRange(report.week_start, payload.weekEnd)} chip="This week" />
 
         <InsightsHeader
           availableWeeks={availableWeeks}
@@ -128,8 +123,8 @@ export function InsightsClient({ report, availableWeeks, userEmail: _userEmail =
         {/* This week so far — live daily numbers above the completed-week report */}
         <ThisWeekSoFar snapshots={dailySnapshots} />
 
-        {/* Account snapshot — completed week */}
-        <SnapshotBar ig={igSnap} fb={fbSnap} />
+        {/* Account snapshot — completed week (IG deltas vs prior week) */}
+        <SnapshotBar ig={igSnap} fb={fbSnap} priorIg={payload.priorIgSnapshot} />
 
         {/* Trend */}
         <TrendDisplay trend={payload.trend} />
@@ -159,6 +154,51 @@ export function InsightsClient({ report, availableWeeks, userEmail: _userEmail =
         </div>
       </div>
     </AppShell>
+  );
+}
+
+// Format a Mon–Sun date range as "Jun 9 — Jun 15" (UTC: these are plain date strings).
+function fmtRange(startISO: string, endISO: string): string {
+  const opts: Intl.DateTimeFormatOptions = { month: "short", day: "numeric", timeZone: "UTC" };
+  try {
+    const s = new Date(`${startISO}T00:00:00Z`).toLocaleDateString("en-US", opts);
+    const e = new Date(`${endISO}T00:00:00Z`).toLocaleDateString("en-US", opts);
+    return `${s} — ${e}`;
+  } catch {
+    return "Weekly report";
+  }
+}
+
+// Editorial page header — date-range eyebrow, serif title, optional "This week" chip.
+function InsightsTitle({ eyebrow, chip }: { eyebrow: string; chip?: string }) {
+  return (
+    <div className="flex items-start justify-between pt-6">
+      <div>
+        <p className="eyebrow mb-1">{eyebrow}</p>
+        <h1
+          className="text-2xl tracking-tight"
+          style={{ fontFamily: "var(--font-serif)", fontWeight: 500, color: "var(--text-primary)" }}
+        >
+          Insights
+        </h1>
+      </div>
+      {chip && (
+        <span
+          className="tabular-nums"
+          style={{
+            fontFamily: "var(--font-mono)",
+            fontSize: 11,
+            padding: "3px 9px",
+            borderRadius: 4,
+            border: "1px solid var(--gold-border)",
+            background: "var(--gold-dim)",
+            color: "var(--gold)",
+          }}
+        >
+          {chip}
+        </span>
+      )}
+    </div>
   );
 }
 

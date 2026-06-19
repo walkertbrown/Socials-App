@@ -1,10 +1,12 @@
 "use client";
 
-// Account-level metrics bar — IG + FB side by side.
-// Restyled to spec: 4 teal stat tiles with +delta labels.
+// Account-level metrics for the completed week — editorial ledger grid.
+// Instagram metrics carry a green/red week-over-week delta (prior IG snapshot is
+// stored); Facebook has no prior-week snapshot, so its numbers show without a delta.
 // Audience snapshot is IG-ONLY (FB demographics are unavailable per ground truth).
 
 import type { AccountSnapshot } from "@/lib/db/weekly-snapshots";
+import { StatGrid, pctDelta, type Stat } from "@/components/insights/stat-grid";
 
 function fmt(n: number | null | undefined): string {
   if (n == null) return "—";
@@ -19,46 +21,23 @@ function fmtSigned(n: number | null | undefined): string {
 interface SnapshotBarProps {
   ig: AccountSnapshot | null;
   fb: AccountSnapshot | null;
+  priorIg?: AccountSnapshot | null;
 }
 
-interface StatTileProps {
-  label: string;
-  value: string;
-  delta?: string;
-}
+export function SnapshotBar({ ig, fb, priorIg }: SnapshotBarProps) {
+  const stats: Stat[] = [
+    { label: "IG Reach", value: fmt(ig?.reach), delta: pctDelta(ig?.reach, priorIg?.reach) },
+    { label: "IG Views", value: fmt(ig?.views), delta: pctDelta(ig?.views, priorIg?.views) },
+    { label: "Net Followers (IG)", value: fmtSigned(ig?.net_followers), delta: pctDelta(ig?.net_followers, priorIg?.net_followers) },
+    { label: "Link Taps (IG)", value: fmt(ig?.link_taps), delta: pctDelta(ig?.link_taps, priorIg?.link_taps) },
+    { label: "FB Unique Reach", value: fmt(fb?.reach) },
+    { label: "FB Engagement", value: fmt(fb?.engagement) },
+  ];
 
-function StatTile({ label, value, delta }: StatTileProps) {
   return (
-    <div
-      className="flex flex-col gap-1 rounded p-3"
-      style={{ background: "var(--surface-hi)", border: "1px solid var(--border)" }}
-    >
-      <span className="eyebrow">{label}</span>
-      <span className="text-lg font-semibold tabular-nums" style={{ fontFamily: "var(--font-mono)", color: "var(--gold)" }}>
-        {value}
-      </span>
-      {delta !== undefined && (
-        <span className="text-xs" style={{ color: "var(--text-dim)" }}>{delta}</span>
-      )}
-    </div>
-  );
-}
-
-export function SnapshotBar({ ig, fb }: SnapshotBarProps) {
-  return (
-    <div
-      className="rounded p-4"
-      style={{ border: "1px solid var(--border)", background: "var(--surface)" }}
-    >
+    <section>
       <p className="eyebrow mb-3">This week at a glance</p>
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
-        <StatTile label="IG Reach" value={fmt(ig?.reach)} />
-        <StatTile label="IG Views" value={fmt(ig?.views)} />
-        <StatTile label="Net Followers (IG)" value={fmtSigned(ig?.net_followers)} />
-        <StatTile label="Link Taps (IG)" value={fmt(ig?.link_taps)} />
-        <StatTile label="FB Unique Reach" value={fmt(fb?.reach)} />
-        <StatTile label="FB Engagement" value={fmt(fb?.engagement)} />
-      </div>
-    </div>
+      <StatGrid stats={stats} />
+    </section>
   );
 }

@@ -1,15 +1,17 @@
 "use client";
 
-// "This week so far" strip — orchestrates the time-window selector.
-// Weekly data is pre-fetched server-side via the `snapshots` prop (no fetch on initial load).
+// "This week so far" strip — live account numbers with a time-window selector.
+// Weekly data is server-passed via `snapshots` (no fetch on initial load).
 // Daily / monthly windows fetch live from /api/insights/account (cached 30 min).
 // All-time window sums stored weekly_account_snapshots rows (no live Meta call).
+// Restyled to the editorial ledger grid (serif numbers) from the design mock.
 
 import { useState } from "react";
 import type { DailySnapshot } from "@/lib/db/daily-snapshots";
 import type { WindowKey, StripPayload } from "@/lib/report/window-ranges";
 import { WINDOW_LABELS } from "@/lib/report/window-ranges";
 import { WindowSelector } from "@/components/insights/window-selector";
+import { StatGrid, type Stat } from "@/components/insights/stat-grid";
 
 // ── Formatting helpers ────────────────────────────────────────────────────────
 
@@ -39,92 +41,43 @@ function fmtCapturedAt(iso: string): string {
   }
 }
 
-// ── Sub-components ────────────────────────────────────────────────────────────
+// ── Per-window stat builders ──────────────────────────────────────────────────
 
-interface StatTileProps {
-  label: string;
-  value: string;
+function liveStats(data: StripPayload | null, loading: boolean): Stat[] {
+  const v = (val: string) => (loading ? "…" : val);
+  return [
+    { label: "IG Reach", value: v(fmt(data?.ig_reach)) },
+    { label: "IG Views", value: v(fmt(data?.ig_views)) },
+    { label: "IG Followers", value: v(fmt(data?.ig_followers_count)) },
+    { label: "IG Link Taps", value: v(fmt(data?.ig_link_taps)) },
+    { label: "FB Reach", value: v(fmt(data?.fb_reach)) },
+    { label: "FB Engagement", value: v(fmt(data?.fb_engagement)) },
+  ];
 }
 
-function StatTile({ label, value }: StatTileProps) {
-  return (
-    <div
-      className="flex flex-col gap-1 rounded p-3"
-      style={{ background: "var(--gold-dim)", border: "1px solid var(--gold-border)" }}
-    >
-      <span className="eyebrow" style={{ color: "var(--gold)" }}>{label}</span>
-      <span
-        className="text-lg font-semibold tabular-nums"
-        style={{ fontFamily: "var(--font-mono)", color: "var(--gold)" }}
-      >
-        {value}
-      </span>
-    </div>
-  );
+function allTimeStats(data: StripPayload | null, loading: boolean): Stat[] {
+  const v = (val: string) => (loading ? "…" : val);
+  return [
+    { label: "IG Views", value: v(fmt(data?.ig_views)) },
+    { label: "IG Follower Growth", value: v(fmtSigned(data?.ig_net_followers)) },
+    { label: "IG Posts Published", value: v(fmt(data?.ig_posts_published)) },
+    { label: "FB Views", value: v("—") },
+    { label: "FB Follower Growth", value: v(fmtSigned(data?.fb_net_followers)) },
+    { label: "FB Engagement", value: v(fmt(data?.fb_engagement)) },
+  ];
 }
 
-// ── Tile grids per window type ────────────────────────────────────────────────
-
-interface LiveTilesProps {
-  data: StripPayload | null;
-  loading: boolean;
-}
-
-function LiveTiles({ data, loading }: LiveTilesProps) {
-  const v = (val: string) => (loading ? "..." : val);
-  return (
-    <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
-      <StatTile label="IG Reach" value={v(fmt(data?.ig_reach))} />
-      <StatTile label="IG Views" value={v(fmt(data?.ig_views))} />
-      <StatTile label="IG Followers" value={v(fmt(data?.ig_followers_count))} />
-      <StatTile label="IG Link Taps" value={v(fmt(data?.ig_link_taps))} />
-      <StatTile label="FB Reach" value={v(fmt(data?.fb_reach))} />
-      <StatTile label="FB Engagement" value={v(fmt(data?.fb_engagement))} />
-    </div>
-  );
-}
-
-interface AllTimeTilesProps {
-  data: StripPayload | null;
-  loading: boolean;
-}
-
-function AllTimeTiles({ data, loading }: AllTimeTilesProps) {
-  const v = (val: string) => (loading ? "..." : val);
-  return (
-    <>
-      <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
-        <StatTile label="IG Views" value={v(fmt(data?.ig_views))} />
-        <StatTile label="IG Follower Growth" value={v(fmtSigned(data?.ig_net_followers))} />
-        <StatTile label="IG Posts Published" value={v(fmt(data?.ig_posts_published))} />
-        <StatTile label="FB Views" value={v("—")} />
-        <StatTile label="FB Follower Growth" value={v(fmtSigned(data?.fb_net_followers))} />
-        <StatTile label="FB Engagement" value={v(fmt(data?.fb_engagement))} />
-      </div>
-      <p className="mt-2 text-xs" style={{ color: "var(--text-dim)" }}>
-        Reach not shown — unique-reach can't be summed across weeks.
-      </p>
-    </>
-  );
-}
-
-interface WeeklyTilesProps {
-  snapshots: DailySnapshot[];
-}
-
-function WeeklyTiles({ snapshots }: WeeklyTilesProps) {
+function weeklyStats(snapshots: DailySnapshot[]): Stat[] {
   const ig = snapshots.find((s) => s.platform === "instagram") ?? null;
   const fb = snapshots.find((s) => s.platform === "facebook") ?? null;
-  return (
-    <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
-      <StatTile label="IG Reach" value={fmt(ig?.reach)} />
-      <StatTile label="IG Views" value={fmt(ig?.views)} />
-      <StatTile label="Net Followers (IG)" value={fmtSigned(ig?.net_followers)} />
-      <StatTile label="Link Taps (IG)" value={fmt(ig?.link_taps)} />
-      <StatTile label="FB Unique Reach" value={fmt(fb?.reach)} />
-      <StatTile label="FB Engagement" value={fmt(fb?.engagement)} />
-    </div>
-  );
+  return [
+    { label: "IG Reach", value: fmt(ig?.reach) },
+    { label: "IG Views", value: fmt(ig?.views) },
+    { label: "Net Followers (IG)", value: fmtSigned(ig?.net_followers) },
+    { label: "Link Taps (IG)", value: fmt(ig?.link_taps) },
+    { label: "FB Unique Reach", value: fmt(fb?.reach) },
+    { label: "FB Engagement", value: fmt(fb?.engagement) },
+  ];
 }
 
 // ── Main component ────────────────────────────────────────────────────────────
@@ -138,7 +91,6 @@ export function ThisWeekSoFar({ snapshots }: ThisWeekSoFarProps) {
   const [liveData, setLiveData] = useState<StripPayload | null>(null);
   const [loading, setLoading] = useState(false);
 
-  // IG captured_at from snapshot (used for the "as of" label in weekly mode).
   const ig = snapshots.find((s) => s.platform === "instagram") ?? null;
   const fb = snapshots.find((s) => s.platform === "facebook") ?? null;
   const weeklyCapturedAt = ig?.captured_at ?? fb?.captured_at ?? null;
@@ -154,8 +106,7 @@ export function ThisWeekSoFar({ snapshots }: ThisWeekSoFarProps) {
     try {
       const res = await fetch(`/api/insights/account?window=${key}`);
       if (res.ok) {
-        const data = (await res.json()) as StripPayload;
-        setLiveData(data);
+        setLiveData((await res.json()) as StripPayload);
       } else {
         setLiveData(null);
       }
@@ -171,7 +122,6 @@ export function ThisWeekSoFar({ snapshots }: ThisWeekSoFarProps) {
     void fetchWindow(key);
   }
 
-  // "As of" label — per-window logic.
   function asOfLabel(): string | null {
     if (windowKey === "alltime") return "accumulated since Jun 1, 2026";
     if (windowKey === "weekly") return weeklyCapturedAt ? `as of ${fmtCapturedAt(weeklyCapturedAt)}` : null;
@@ -180,30 +130,36 @@ export function ThisWeekSoFar({ snapshots }: ThisWeekSoFarProps) {
   }
 
   const hasWeeklyData = ig !== null || fb !== null;
+  const showWeeklyEmpty = windowKey === "weekly" && !hasWeeklyData;
+
+  const stats =
+    windowKey === "weekly"
+      ? weeklyStats(snapshots)
+      : windowKey === "alltime"
+      ? allTimeStats(liveData, loading)
+      : liveStats(liveData, loading);
 
   return (
-    <div
-      className="rounded p-4"
-      style={{ border: "1px solid var(--gold-border)", background: "var(--surface)" }}
-    >
+    <section>
       <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        {/* Eyebrow label changes per window */}
         <p className="eyebrow" style={{ color: "var(--gold)" }}>
           {WINDOW_LABELS[windowKey]}
         </p>
         <WindowSelector value={windowKey} onChange={handleWindowChange} />
       </div>
 
-      {windowKey === "weekly" && !hasWeeklyData ? (
-        <p className="mt-3 text-sm" style={{ color: "var(--text-dim)" }}>
+      {showWeeklyEmpty ? (
+        <p className="text-sm" style={{ color: "var(--text-dim)" }}>
           No live numbers yet — daily refresh runs each morning.
         </p>
-      ) : windowKey === "weekly" ? (
-        <WeeklyTiles snapshots={snapshots} />
-      ) : windowKey === "alltime" ? (
-        <AllTimeTiles data={liveData} loading={loading} />
       ) : (
-        <LiveTiles data={liveData} loading={loading} />
+        <StatGrid stats={stats} />
+      )}
+
+      {windowKey === "alltime" && (
+        <p className="mt-2 text-xs" style={{ color: "var(--text-dim)" }}>
+          Reach not shown — unique-reach can&apos;t be summed across weeks.
+        </p>
       )}
 
       {asOfLabel() && (
@@ -211,6 +167,6 @@ export function ThisWeekSoFar({ snapshots }: ThisWeekSoFarProps) {
           {asOfLabel()}
         </p>
       )}
-    </div>
+    </section>
   );
 }

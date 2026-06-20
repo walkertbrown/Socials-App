@@ -21,6 +21,7 @@ interface ScheduleData {
   totalScheduled: number;
   totalSent: number;
   prefill: { scheduled_date: string; target_count: number }[] | null;
+  live: boolean;
 }
 
 export function SchedulerView() {
@@ -104,6 +105,10 @@ export function SchedulerView() {
   }
 
   async function runDue() {
+    const live = data?.live;
+    const next = rows.find((r) => r.status !== "done");
+    if (live && !confirm(`Send ${next?.target_count ?? 0} REAL emails to guests now? This can't be undone.`)) return;
+
     setRunning(true);
     setRunMsg(null);
     try {
@@ -111,10 +116,12 @@ export function SchedulerView() {
       if (!res.ok) throw new Error(await res.text());
       const r = await res.json();
       if (!r.ran) {
-        setRunMsg(r.reason === "not_configured" ? "Scheduler table not set up yet — apply migration 0018." : "Nothing due today.");
+        setRunMsg(r.reason === "not_configured" ? "Scheduler table not set up yet — apply migration 0018." : "No pending batches left to send.");
       } else {
+        const verb = r.dryRun ? "Simulated" : "Sent";
+        const tail = r.dryRun ? ". No real email sent." : ".";
         const short = r.shortfall ? ` (${r.shortfall} short — fewer approved drafts than the batch called for)` : "";
-        setRunMsg(`Simulated batch for ${r.scheduled_date}: ${r.sent} of ${r.requested} marked sent${short}. No real email sent.`);
+        setRunMsg(`${verb} batch for ${r.scheduled_date}: ${r.sent} of ${r.requested}${short}${tail}`);
       }
       await load();
     } catch (e) {
@@ -130,14 +137,21 @@ export function SchedulerView() {
   const scheduled = rows.reduce((s, r) => s + (Number(r.target_count) || 0), 0);
   const poolSize = data?.poolSize ?? 0;
   const totalSent = data?.totalSent ?? 0;
+  const live = data?.live ?? false;
   const showPrefill = rows.length === 0 && data?.prefill && data.prefill.length > 0;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      {/* Dry-run banner */}
-      <div style={{ padding: "8px 12px", borderRadius: 6, background: "var(--gold-dim)", border: "1px solid var(--gold-border)", fontSize: 12, color: "var(--gold)" }}>
-        Simulation mode — batches are marked &ldquo;sent&rdquo; for preview only. No real email goes out yet.
-      </div>
+      {/* Mode banner. Nothing ever sends on its own — you trigger each batch. */}
+      {live ? (
+        <div style={{ padding: "8px 12px", borderRadius: 6, background: "var(--red-dim)", border: "1px solid rgba(248,113,113,0.4)", fontSize: 12, color: "var(--red)" }}>
+          Live sending is ON. &ldquo;Send next batch&rdquo; emails real guests. Nothing sends on its own — you trigger each batch.
+        </div>
+      ) : (
+        <div style={{ padding: "8px 12px", borderRadius: 6, background: "var(--gold-dim)", border: "1px solid var(--gold-border)", fontSize: 12, color: "var(--gold)" }}>
+          Simulation mode — &ldquo;Run next batch&rdquo; previews only (no real email). Live sending stays off until OUTREACH_LIVE=1.
+        </div>
+      )}
 
       {/* Tally */}
       <p style={{ fontSize: 13, color: "var(--text-secondary)", margin: 0 }}>
@@ -190,7 +204,12 @@ export function SchedulerView() {
           <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
             <button onClick={addRow} style={{ padding: "8px 14px", borderRadius: 6, fontSize: 13, border: "1px solid var(--border-hi)", background: "var(--surface-hi)", color: "var(--text-secondary)" }}>+ Add date</button>
             <button onClick={save} disabled={saving} className="btn-teal" style={{ padding: "8px 14px", borderRadius: 6, fontSize: 13, fontWeight: 600 }}>{saving ? "Saving…" : "Save schedule"}</button>
-            <button onClick={runDue} disabled={running} style={{ padding: "8px 14px", borderRadius: 6, fontSize: 13, border: "1px solid var(--gold-border)", background: "var(--gold-dim)", color: "var(--gold)" }}>{running ? "Running…" : "Run due batch now (simulate)"}</button>
+            <button onClick={runDue} disabled={running}
+              style={live
+                ? { padding: "8px 14px", borderRadius: 6, fontSize: 13, fontWeight: 600, border: "1px solid rgba(248,113,113,0.4)", background: "var(--red-dim)", color: "var(--red)" }
+                : { padding: "8px 14px", borderRadius: 6, fontSize: 13, border: "1px solid var(--gold-border)", background: "var(--gold-dim)", color: "var(--gold)" }}>
+              {running ? (live ? "Sending…" : "Running…") : live ? "Send next batch" : "Run next batch (simulate)"}
+            </button>
             {totalSent > 0 && (
               <button onClick={resetSim} disabled={running} style={{ padding: "8px 14px", borderRadius: 6, fontSize: 13, border: "1px solid var(--border-hi)", background: "var(--surface-hi)", color: "var(--text-dim)" }}>Reset simulation</button>
             )}

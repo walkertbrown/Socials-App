@@ -10,11 +10,14 @@ export async function POST(request: NextRequest) {
   const user = await getUserOrNull();
   if (!user) return new NextResponse("Unauthorized", { status: 401 });
 
-  const { photoId, intent } = await request.json();
+  const { photoId, platform, intent } = await request.json();
   if (typeof photoId !== "string") return new NextResponse("Bad request", { status: 400 });
+  const plat =
+    platform === "facebook" ? "facebook" : platform === "instagram" ? "instagram" : null;
+  if (!plat) return new NextResponse("Bad request: platform must be facebook or instagram", { status: 400 });
 
   try {
-    const raw = await draftCaption(photoId, typeof intent === "string" ? intent : undefined);
+    const raw = await draftCaption(photoId, plat, typeof intent === "string" ? intent : undefined);
     const caption = await editCaption(raw); // second pass: de-AI-ify
     return NextResponse.json({ caption });
   } catch (e) {

@@ -14,10 +14,10 @@ export async function editCaption(caption: string): Promise<string> {
     model: MODEL,
     max_tokens: 220,
     system:
-      "You edit a New Orleans restaurant's social captions. Rewrite so it reads like a real, slightly witty person wrote it — never like AI. " +
+      "You edit a New Orleans restaurant's social captions. Rewrite so it reads like a real, slightly witty person wrote it, never like AI. " +
       "Cut the AI tells: over-used em-dashes, 'elevate', 'nestled', 'whether you're', 'there's nothing quite like', 'a testament to', " +
       "'in the heart of', hollow tricolons, and generic 'magic / memories are made / unforgettable' filler. " +
-      "Keep the real specifics, the reservation nudge, and the hashtags. Make it tighter, plainer, and more human. " +
+      "Keep the real specifics, the reservation call-to-action, any reservation link or web address exactly as written, and the hashtags. Make it tighter, plainer, and more human. " +
       "Return ONLY the edited caption.",
     messages: [{ role: "user", content: caption }],
   });

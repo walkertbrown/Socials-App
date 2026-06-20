@@ -11,11 +11,11 @@ import { PhotoPicker } from "@/components/photo-picker";
 import { PlatformSchedule, type PlatformItem } from "@/components/platform-schedule";
 import { MediaModePicker } from "@/components/compose/media-mode-picker";
 import { IntentSearch } from "@/components/compose/intent-search";
-import { CaptionBox } from "@/components/compose/caption-box";
-import { HashtagPanel } from "@/components/compose/hashtag-panel";
+import { CaptionsSection } from "@/components/compose/captions-section";
+import { useCaptionDraft, type Platform } from "@/components/compose/use-caption-draft";
 import { VideoModeSection } from "@/components/compose/video-mode-section";
 import { centralToUtcIso } from "@/lib/time";
-import { PIN, makeItems, splitCaptionAndTags } from "@/lib/compose-helpers";
+import { PIN, makeItems, mergeTags } from "@/lib/compose-helpers";
 
 export function ComposeClient({
   photos,
@@ -46,15 +46,26 @@ export function ComposeClient({
   const [intent, setIntent] = useState("");
   const [matchedIds, setMatchedIds] = useState<string[] | null>(null);
   const [searching, setSearching] = useState(false);
-  const [caption, setCaption] = useState("");
-  const [selectedTags, setSelectedTags] = useState<string[]>([]);
-  const [aiDraft, setAiDraft] = useState<string | null>(null);
-  const [drafting, setDrafting] = useState(false);
+  // Per-platform hashtag selections — Instagram and Facebook keep separate sets.
+  const [selectedTags, setSelectedTags] = useState<Record<Platform, string[]>>({
+    facebook: [],
+    instagram: [],
+  });
   const [sharedWhen, setSharedWhen] = useState("");
   const [delivery, setDelivery] = useState<"auto" | "reminder">("auto");
   const [items, setItems] = useState<PlatformItem[]>(makeItems("", "auto"));
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+
+  // Per-platform captions (Instagram + Facebook), their raw AI drafts, and the
+  // per-platform "Draft with AI" call. Tags stripped from a draft seed the panel.
+  const captionDraft = useCaptionDraft({
+    getPhotoId: () => selectedIds[0],
+    getIntent: () => intent.trim(),
+    onSeedTags: (platform, tags) =>
+      setSelectedTags((prev) => ({ ...prev, [platform]: mergeTags(prev[platform], tags) })),
+    onError: setMsg,
+  });
 
   const primaryPhoto = photos.find((p) => p.id === selectedIds[0]);
   const isVideo = primaryPhoto?.category === "videos";
@@ -111,69 +122,42 @@ export function ComposeClient({
     setSearching(false);
   }
 
-  async function draft() {
-    if (!selectedIds[0]) return setMsg("Pick a photo first.");
-    setDrafting(true); setMsg(null);
-    try {
-      const res = await fetch("/api/posts/draft-caption", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ photoId: selectedIds[0], intent: intent.trim() || undefined }),
-      });
-      const d = await res.json();
-      if (!res.ok) throw new Error(d.error || "Failed");
-
-      // Strip hashtags from the AI caption and seed them into the hashtag panel.
-      // The caption box stays clean; tags aren't duplicated.
-      const { body, tags } = splitCaptionAndTags(d.caption);
-      setCaption(body);
-      setAiDraft(d.caption); // preserve original for learning loop
-
-      // Merge new AI tags into existing selected tags (dedupe, case-insensitive).
-      setSelectedTags((prev) => {
-        const existing = new Set(prev.map((t) => t.toLowerCase()));
-        const merged = [...prev];
-        for (const tag of tags) {
-          if (!existing.has(tag) && tag !== PIN.toLowerCase()) {
-            merged.push(tag);
-            existing.add(tag);
-          }
-        }
-        return merged;
-      });
-    } catch { setMsg("Couldn't draft a caption — try again."); }
-    setDrafting(false);
-  }
-
   async function schedule() {
     if (mediaMode === "graphic" && !selectedGraphicId) return setMsg("Pick a saved graphic first.");
     if (mediaMode === "photo" && selectedIds.length === 0) return setMsg("Pick a photo or video first.");
     if (!items.length) return setMsg("Pick at least one platform.");
     if (items.some((i) => !i.scheduled_at)) return setMsg("Set a time for each platform.");
+    // Every selected platform needs its own caption — she never posts without one.
+    const missing = items.find((i) => !captionDraft.captions[i.platform as Platform]?.trim());
+    if (missing) {
+      return setMsg(
+        `Add a ${missing.platform === "facebook" ? "Facebook" : "Instagram"} caption before scheduling.`
+      );
+    }
     setSaving(true); setMsg(null);
     try {
       const postGroupId = crypto.randomUUID();
       const mediaType = mediaMode === "graphic" ? "graphic" : isVideo ? "video" : isCarousel ? "carousel" : "image";
       const mediaId = mediaMode === "graphic" ? selectedGraphicId! : selectedIds[0];
 
-      // Merge caption + selected tags into the final caption string.
-      // Pin is always first; user-selected tags follow (space-separated).
-      const tagLine = [PIN, ...selectedTags].join(" ");
-      const finalCaption = caption.trim()
-        ? `${caption.trim()}\n\n${tagLine}`
-        : tagLine;
+      // Append each platform's OWN tag set to its caption body.
+      // Pin is always first; that platform's selected tags follow (space-separated).
+      const withTags = (platform: Platform, body: string) => {
+        const tagLine = [PIN, ...selectedTags[platform]].join(" ");
+        return body.trim() ? `${body.trim()}\n\n${tagLine}` : tagLine;
+      };
 
       const payload = {
         photo_id: mediaId,
         ...(isCarousel ? { photo_ids: selectedIds } : {}),
-        caption: finalCaption,
-        ai_draft: aiDraft ?? undefined,
         media_type: mediaType,
         post_group_id: postGroupId,
         items: items.map((item) => ({
           platform: item.platform,
           scheduled_at: centralToUtcIso(item.scheduled_at),
           delivery: item.delivery,
+          caption: withTags(item.platform as Platform, captionDraft.captions[item.platform as Platform] ?? ""),
+          ai_draft: captionDraft.aiDrafts[item.platform as Platform] ?? undefined,
         })),
       };
       const res = await fetch("/api/posts", {
@@ -251,30 +235,22 @@ export function ComposeClient({
           </section>
         )}
 
-        {/* Caption */}
-        <CaptionBox
-          caption={caption}
-          mediaMode={mediaMode}
-          selectedIds={selectedIds}
-          drafting={drafting}
+        {/* Captions + hashtags — an independent block per platform (IG + FB) */}
+        <CaptionsSection
+          captions={captionDraft.captions}
+          drafting={captionDraft.drafting}
+          selectedTags={selectedTags}
+          activePlatforms={new Set(items.map((i) => i.platform))}
+          canDraft={mediaMode === "photo" && selectedIds.length > 0}
           stepNumber={captionStepNum}
-          onChange={setCaption}
-          onDraft={draft}
+          provenTags={provenTags}
+          photoId={selectedIds[0] ?? null}
+          onChange={captionDraft.setCaption}
+          onDraft={captionDraft.draft}
+          onTagsChange={(platform, tags) =>
+            setSelectedTags((prev) => ({ ...prev, [platform]: tags }))
+          }
         />
-
-        {/* Hashtag panel */}
-        <section>
-          <p className="mb-2 text-sm font-medium" style={{ color: "var(--text-secondary)" }}>
-            {captionStepNum + 1}. Hashtags
-          </p>
-          <HashtagPanel
-            provenTags={provenTags}
-            photoId={selectedIds[0] ?? null}
-            caption={caption}
-            selectedTags={selectedTags}
-            onSelectedTagsChange={setSelectedTags}
-          />
-        </section>
 
         <PlatformSchedule items={items} sharedWhen={sharedWhen} onSharedWhenChange={handleSharedWhenChange}
           onItemChange={handleItemChange} onSetPlatforms={handleSetPlatforms} isVideo={isVideo} />

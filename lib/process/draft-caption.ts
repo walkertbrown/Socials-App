@@ -13,7 +13,11 @@ const MODEL = "claude-haiku-4-5";
 //
 // Voice corpus, style notes, and hashtags all come from learning-loop data
 // (her real posted captions) so the drafts improve over time automatically.
-export async function draftCaption(photoId: string, intent?: string): Promise<string> {
+export async function draftCaption(
+  photoId: string,
+  platform: "facebook" | "instagram",
+  intent?: string
+): Promise<string> {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) throw new Error("Missing ANTHROPIC_API_KEY");
   const supabase = createAdminClient();
@@ -80,8 +84,21 @@ export async function draftCaption(photoId: string, intent?: string): Promise<st
   // Hashtag suggestion line — real tags she uses, not invented ones.
   const tagLine =
     topTags.length > 0
-      ? `Prefer these real hashtags she uses (pick the most relevant 4-6): ${topTags.join(" ")}. `
+      ? `Prefer these real hashtags she uses (pick the 5 most relevant): ${topTags.join(" ")}. `
       : "";
+
+  // ── Per-platform voice + call-to-action (her FB↔IG rubric) ──────────────────
+  const isFacebook = platform === "facebook";
+
+  // Audience + register: FB skews older and not-trendy; IG is discovery-minded.
+  const audienceLine = isFacebook
+    ? "This caption is for FACEBOOK. The audience skews older (think someone your parents' age). Write warm and clear, the way you'd tell your parents about a place they'd think is cool. Keep it purposeful: do not be trendy, slangy, or overly chatty. "
+    : "This caption is for INSTAGRAM. The audience is local foodies of all ages plus visitors discovering the place, so you can be a little more current, and a light touch of local or French Quarter flavor is welcome. ";
+
+  // CTA mechanics differ: FB pastes the OpenTable link; IG points to link in bio.
+  const ctaLine = isFacebook
+    ? 'End with a clear reservation call-to-action that works the OpenTable link into a sentence, with the full URL written out, e.g. "Reservations are going fast, so grab your table: https://www.opentable.com/the-pelican-club-new-orleans". '
+    : 'End with a reservation nudge that points to the profile link, e.g. "Reserve at the link in bio" or "Tap the reserve link on our profile". Never paste a raw web address. ';
 
   // Style-note line — her recurring edits distilled into 2-4 bullets.
   const styleLine = styleNoteText
@@ -100,15 +117,20 @@ export async function draftCaption(photoId: string, intent?: string): Promise<st
     {
       type: "text" as const,
       text:
-        "You write Instagram/Facebook captions for The Pelican Club — an upscale restaurant and bar in the French Quarter, New Orleans, serving since 1990. " +
+        "You write social captions for The Pelican Club, an upscale restaurant and bar in the French Quarter, New Orleans, serving since 1990. " +
         intentLine +
         grounding +
         styleLine +
         tagLine +
-        `This is a "${labelFor(photo.category ?? "")}" photo. Write ONE caption in the house voice: ` +
-        "open with a short hook or vivid line, describe what's in the photo invitingly, add a reservation nudge " +
-        '("Reservations at the link in bio" or via OpenTable), use 1-2 emoji, then 4-6 hashtags starting with #PelicanClubNOLA. ' +
-        'Be concrete and specific with a little dry wit — avoid flowery filler like "magic", "memories are made", "elevate", or "nestled". ' +
+        `This is a "${labelFor(photo.category ?? "")}" photo. Write ONE caption in the house voice. ` +
+        audienceLine +
+        "Shape it as a short hook, then describe what's in the photo invitingly, then the call-to-action, all in 2 to 3 very short paragraphs. " +
+        ctaLine +
+        "Use 1-2 emoji and end with exactly 5 hashtags starting with #PelicanClubNOLA. " +
+        "Voice rules (important): warm and professional, never quippy or gimmicky. " +
+        'Do NOT use em dashes. A normal hyphen "-" is fine, but never the long dash that looks like two hyphens joined together. ' +
+        "Never downplay or devalue the regular menu to make a special sound better; describe everything as worth wanting. " +
+        'Be concrete and specific; avoid flowery filler like "magic", "memories are made", "elevate", or "nestled". ' +
         voiceLine +
         " Return only the caption text, nothing else.",
     },

@@ -48,12 +48,19 @@ export async function POST(request: NextRequest) {
   }
 
   const rows = items.map(
-    (item: { platform: string; scheduled_at: string; delivery?: string }) => ({
+    (item: { platform: string; scheduled_at: string; delivery?: string; caption?: string; ai_draft?: string }) => ({
       photo_id,
       // photo_ids is set for carousels (ordered array of photo UUIDs).
       ...(Array.isArray(photo_ids) && photo_ids.length > 1 ? { photo_ids } : {}),
-      caption: caption ?? "",
-      ai_draft: typeof ai_draft === "string" ? ai_draft : null,
+      // Per-platform caption/draft when the composer sends them; falls back to the
+      // top-level fields for older callers (back-compatible).
+      caption: typeof item.caption === "string" ? item.caption : (caption ?? ""),
+      ai_draft:
+        typeof item.ai_draft === "string"
+          ? item.ai_draft
+          : typeof ai_draft === "string"
+          ? ai_draft
+          : null,
       platform: item.platform,
       media_type: resolvedMediaType,
       scheduled_at: item.scheduled_at,

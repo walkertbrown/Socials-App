@@ -19,9 +19,10 @@ type Flags = Record<Platform, boolean>;
 interface Options {
   getPhotoId: () => string | undefined;
   getIntent: () => string;
-  // The draft strips hashtags out of the AI text; they get seeded into the shared
-  // hashtag panel via this callback.
-  onSeedTags: (tags: string[]) => void;
+  // The draft strips hashtags out of the AI text; they get seeded into THAT
+  // platform's hashtag panel via this callback (Instagram tags stay on Instagram,
+  // Facebook tags on Facebook).
+  onSeedTags: (platform: Platform, tags: string[]) => void;
   onError: (msg: string | null) => void;
 }
 
@@ -52,7 +53,7 @@ export function useCaptionDraft({ getPhotoId, getIntent, onSeedTags, onError }: 
       const { body, tags } = splitCaptionAndTags(d.caption);
       setCaption(platform, body);
       setAiDrafts((a) => ({ ...a, [platform]: d.caption })); // raw draft for the learning loop
-      onSeedTags(tags);
+      onSeedTags(platform, tags);
     } catch {
       onError("Couldn't draft a caption — try again.");
     } finally {

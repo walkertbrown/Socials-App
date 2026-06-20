@@ -13,7 +13,6 @@ import { MediaModePicker } from "@/components/compose/media-mode-picker";
 import { IntentSearch } from "@/components/compose/intent-search";
 import { CaptionsSection } from "@/components/compose/captions-section";
 import { useCaptionDraft, type Platform } from "@/components/compose/use-caption-draft";
-import { HashtagPanel } from "@/components/compose/hashtag-panel";
 import { VideoModeSection } from "@/components/compose/video-mode-section";
 import { centralToUtcIso } from "@/lib/time";
 import { PIN, makeItems, mergeTags } from "@/lib/compose-helpers";
@@ -47,7 +46,11 @@ export function ComposeClient({
   const [intent, setIntent] = useState("");
   const [matchedIds, setMatchedIds] = useState<string[] | null>(null);
   const [searching, setSearching] = useState(false);
-  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  // Per-platform hashtag selections — Instagram and Facebook keep separate sets.
+  const [selectedTags, setSelectedTags] = useState<Record<Platform, string[]>>({
+    facebook: [],
+    instagram: [],
+  });
   const [sharedWhen, setSharedWhen] = useState("");
   const [delivery, setDelivery] = useState<"auto" | "reminder">("auto");
   const [items, setItems] = useState<PlatformItem[]>(makeItems("", "auto"));
@@ -59,7 +62,8 @@ export function ComposeClient({
   const captionDraft = useCaptionDraft({
     getPhotoId: () => selectedIds[0],
     getIntent: () => intent.trim(),
-    onSeedTags: (tags) => setSelectedTags((prev) => mergeTags(prev, tags)),
+    onSeedTags: (platform, tags) =>
+      setSelectedTags((prev) => ({ ...prev, [platform]: mergeTags(prev[platform], tags) })),
     onError: setMsg,
   });
 
@@ -136,11 +140,12 @@ export function ComposeClient({
       const mediaType = mediaMode === "graphic" ? "graphic" : isVideo ? "video" : isCarousel ? "carousel" : "image";
       const mediaId = mediaMode === "graphic" ? selectedGraphicId! : selectedIds[0];
 
-      // Append the shared tag set to each platform's own caption body.
-      // Pin is always first; user-selected tags follow (space-separated).
-      const tagLine = [PIN, ...selectedTags].join(" ");
-      const withTags = (body: string) =>
-        body.trim() ? `${body.trim()}\n\n${tagLine}` : tagLine;
+      // Append each platform's OWN tag set to its caption body.
+      // Pin is always first; that platform's selected tags follow (space-separated).
+      const withTags = (platform: Platform, body: string) => {
+        const tagLine = [PIN, ...selectedTags[platform]].join(" ");
+        return body.trim() ? `${body.trim()}\n\n${tagLine}` : tagLine;
+      };
 
       const payload = {
         photo_id: mediaId,
@@ -151,7 +156,7 @@ export function ComposeClient({
           platform: item.platform,
           scheduled_at: centralToUtcIso(item.scheduled_at),
           delivery: item.delivery,
-          caption: withTags(captionDraft.captions[item.platform as Platform] ?? ""),
+          caption: withTags(item.platform as Platform, captionDraft.captions[item.platform as Platform] ?? ""),
           ai_draft: captionDraft.aiDrafts[item.platform as Platform] ?? undefined,
         })),
       };
@@ -230,32 +235,22 @@ export function ComposeClient({
           </section>
         )}
 
-        {/* Captions — one per platform (Instagram + Facebook) */}
+        {/* Captions + hashtags — an independent block per platform (IG + FB) */}
         <CaptionsSection
           captions={captionDraft.captions}
           drafting={captionDraft.drafting}
+          selectedTags={selectedTags}
           activePlatforms={new Set(items.map((i) => i.platform))}
           canDraft={mediaMode === "photo" && selectedIds.length > 0}
           stepNumber={captionStepNum}
+          provenTags={provenTags}
+          photoId={selectedIds[0] ?? null}
           onChange={captionDraft.setCaption}
           onDraft={captionDraft.draft}
+          onTagsChange={(platform, tags) =>
+            setSelectedTags((prev) => ({ ...prev, [platform]: tags }))
+          }
         />
-
-        {/* Hashtag panel */}
-        <section>
-          <p className="mb-2 text-sm font-medium" style={{ color: "var(--text-secondary)" }}>
-            {captionStepNum + 1}. Hashtags
-          </p>
-          {/* Live suggestions key off the Instagram caption (the hashtag-heavy
-              platform); the chosen tags are appended to both captions at submit. */}
-          <HashtagPanel
-            provenTags={provenTags}
-            photoId={selectedIds[0] ?? null}
-            caption={captionDraft.captions.instagram}
-            selectedTags={selectedTags}
-            onSelectedTagsChange={setSelectedTags}
-          />
-        </section>
 
         <PlatformSchedule items={items} sharedWhen={sharedWhen} onSharedWhenChange={handleSharedWhenChange}
           onItemChange={handleItemChange} onSetPlatforms={handleSetPlatforms} isVideo={isVideo} />

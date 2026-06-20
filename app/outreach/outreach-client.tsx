@@ -1,7 +1,8 @@
 "use client";
 
 // outreach-client.tsx — top-level Outreach screen.
-// Renders AppShell + ScreenEyebrow + a 3-way switch (Occasions / Campaigns / Send-off).
+// Renders AppShell + ScreenEyebrow + a tab switch
+// (Occasions / Campaigns / Email List / Send-off / Scheduler).
 // Each section is its own component; this file stays thin.
 
 import { useState } from "react";
@@ -11,9 +12,10 @@ import { OccasionsView } from "@/app/outreach/occasions-view";
 import { CampaignsView } from "@/app/outreach/campaigns-view";
 import { SendoffView } from "@/app/outreach/sendoff-view";
 import { ListView } from "@/app/outreach/list-view";
+import { SchedulerView } from "@/app/outreach/scheduler-view";
 import type { BucketCounts, Occasion } from "@/lib/outreach/types";
 
-type Tab = "occasions" | "campaigns" | "list" | "sendoff";
+type Tab = "occasions" | "campaigns" | "list" | "sendoff" | "scheduler";
 
 interface Props {
   initialBucketCounts: BucketCounts;
@@ -51,6 +53,7 @@ export function OutreachClient({ initialBucketCounts, initialOccasions }: Props)
               { key: "campaigns", label: "Campaigns" },
               { key: "list",      label: "Email List" },
               { key: "sendoff",   label: "Send-off" },
+              { key: "scheduler", label: "Scheduler" },
             ] as { key: Tab; label: string }[]
           ).map(({ key, label }) => (
             <button
@@ -90,6 +93,7 @@ export function OutreachClient({ initialBucketCounts, initialOccasions }: Props)
         )}
         {activeTab === "list" && <ListView />}
         {activeTab === "sendoff" && <SendoffView />}
+        {activeTab === "scheduler" && <SchedulerView />}
       </div>
     </AppShell>
   );

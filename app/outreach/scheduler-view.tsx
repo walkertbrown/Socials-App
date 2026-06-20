@@ -86,6 +86,23 @@ export function SchedulerView() {
     }
   }
 
+  async function resetSim() {
+    if (!confirm("Undo the simulation? This un-marks the 'simulated' drafts and resets those batches to pending. Real sends are not affected.")) return;
+    setRunning(true);
+    setRunMsg(null);
+    try {
+      const res = await fetch("/api/outreach/schedule/reset", { method: "POST" });
+      if (!res.ok) throw new Error(await res.text());
+      const r = await res.json();
+      setRunMsg(`Simulation reset — ${r.draftsReset} draft${r.draftsReset === 1 ? "" : "s"} returned to the pool.`);
+      await load();
+    } catch (e) {
+      setRunMsg((e as Error).message);
+    } finally {
+      setRunning(false);
+    }
+  }
+
   async function runDue() {
     setRunning(true);
     setRunMsg(null);
@@ -174,6 +191,9 @@ export function SchedulerView() {
             <button onClick={addRow} style={{ padding: "8px 14px", borderRadius: 6, fontSize: 13, border: "1px solid var(--border-hi)", background: "var(--surface-hi)", color: "var(--text-secondary)" }}>+ Add date</button>
             <button onClick={save} disabled={saving} className="btn-teal" style={{ padding: "8px 14px", borderRadius: 6, fontSize: 13, fontWeight: 600 }}>{saving ? "Saving…" : "Save schedule"}</button>
             <button onClick={runDue} disabled={running} style={{ padding: "8px 14px", borderRadius: 6, fontSize: 13, border: "1px solid var(--gold-border)", background: "var(--gold-dim)", color: "var(--gold)" }}>{running ? "Running…" : "Run due batch now (simulate)"}</button>
+            {totalSent > 0 && (
+              <button onClick={resetSim} disabled={running} style={{ padding: "8px 14px", borderRadius: 6, fontSize: 13, border: "1px solid var(--border-hi)", background: "var(--surface-hi)", color: "var(--text-dim)" }}>Reset simulation</button>
+            )}
           </div>
         </>
       )}

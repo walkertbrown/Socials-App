@@ -81,3 +81,39 @@ export async function saveSchedule(rows: SaveRow[]): Promise<ScheduleRow[]> {
 
   return listSchedule();
 }
+
+// ── Reset simulation ─────────────────────────────────────────────────────────
+// Undo a dry-run so you can re-run it or go live fresh: un-consume the drafts
+// that were marked 'simulated' (NEVER touches real 'sent'/'failed' drafts) and
+// reset any schedule row that had NO real send back to 'pending'.
+export async function resetSimulation(): Promise<{ draftsReset: number }> {
+  const sb = createAdminClient();
+  const now = new Date().toISOString();
+
+  const { data: cleared, error: dErr } = await sb
+    .from("outreach_drafts")
+    .update({ sent_at: null, send_status: null, schedule_id: null, updated_at: now })
+    .eq("send_status", "simulated")
+    .select("id");
+  if (dErr && dErr.code !== "42P01") throw new Error(dErr.message);
+
+  // Schedule rows touched by a REAL send stay 'done' (never resurrect a live batch).
+  const { data: realRows } = await sb
+    .from("outreach_drafts")
+    .select("schedule_id")
+    .in("send_status", ["sent", "failed"])
+    .not("schedule_id", "is", null);
+  const keep = new Set((realRows ?? []).map((r) => (r as { schedule_id: string }).schedule_id));
+
+  const { data: doneRows } = await sb.from("outreach_schedule").select("id").eq("status", "done");
+  const toReset = (doneRows ?? []).map((r) => (r as { id: string }).id).filter((id) => !keep.has(id));
+  if (toReset.length) {
+    const { error } = await sb
+      .from("outreach_schedule")
+      .update({ status: "pending", sent_count: 0, updated_at: now })
+      .in("id", toReset);
+    if (error) throw new Error(error.message);
+  }
+
+  return { draftsReset: (cleared ?? []).length };
+}

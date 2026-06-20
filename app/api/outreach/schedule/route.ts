@@ -3,6 +3,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { listSchedule, saveSchedule, type SaveRow } from "@/lib/db/outreach-schedule";
 import { countSendablePool } from "@/lib/outreach/process-drip";
 import { buildRampPlan, todayChicago, addDays } from "@/lib/outreach/schedule-plan";
+import { isLiveSending } from "@/lib/outreach/send-config";
 
 export const runtime = "nodejs";
 
@@ -22,7 +23,7 @@ export async function GET() {
   const totalSent = rows.reduce((s, r) => s + r.sent_count, 0);
   const prefill = rows.length === 0 ? buildRampPlan(addDays(todayChicago(), 1), poolSize) : null;
 
-  return NextResponse.json({ rows, poolSize, totalScheduled, totalSent, prefill });
+  return NextResponse.json({ rows, poolSize, totalScheduled, totalSent, prefill, live: isLiveSending() });
 }
 
 // PUT — replace the schedule with the submitted rows (diff-based save).

@@ -58,17 +58,17 @@ export interface DripResult {
   dryRun: boolean;
 }
 
-// Process the earliest pending batch dated on/before today. One batch per call,
-// so a daily cron sends at most one batch per day.
-export async function processDueBatch(opts: { dryRun: boolean }): Promise<DripResult> {
+// Process the next pending batch (oldest scheduled_date first). One batch per
+// call — the user triggers each one manually; there is no autonomous cron.
+// ignoreDate=true (the manual Send-off) sends the next pending batch regardless
+// of its planned date; without it, only batches dated on/before today qualify.
+export async function processDueBatch(opts: { dryRun: boolean; ignoreDate?: boolean }): Promise<DripResult> {
   const sb = createAdminClient();
-  const today = todayChicago();
 
-  const { data: due, error } = await sb
-    .from("outreach_schedule")
-    .select("*")
-    .eq("status", "pending")
-    .lte("scheduled_date", today)
+  let query = sb.from("outreach_schedule").select("*").eq("status", "pending");
+  if (!opts.ignoreDate) query = query.lte("scheduled_date", todayChicago());
+
+  const { data: due, error } = await query
     .order("scheduled_date", { ascending: true })
     .limit(1)
     .maybeSingle();

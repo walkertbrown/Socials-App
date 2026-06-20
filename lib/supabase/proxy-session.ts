@@ -40,6 +40,9 @@ export async function updateSession(request: NextRequest) {
     path.startsWith("/auth") ||
     path.startsWith("/api/cron") ||
     path.startsWith("/api/webhooks") ||
+    // Email recipients aren't logged in — the unsubscribe link/page must be public.
+    path.startsWith("/api/unsubscribe") ||
+    path === "/unsubscribe" ||
     path === "/sw.js" ||
     path === "/manifest.json";
 
